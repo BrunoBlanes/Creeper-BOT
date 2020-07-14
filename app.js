@@ -106,12 +106,12 @@ const server = http.createServer((req, res) => {
 			} else if (body['action'] == 'moved' && body['project_card']) {
 				// If card is related to an issue
 				if (body['project_card']['content_url']) {
-					let repo = body['repository']['name'];
-					let owner = body['repository']['owner']['login'];
 					let issueUrl = body['project_card']['content_url'];
 					let columnUrl = body['project_card']['column_url'];
-					// Assigns the issue to the milestone that corresponds to the current column name
-					issueToMilestone(columnUrl, issueUrl, owner, repo, installationId)
+					let labelsUrl = body['repository']['labels_url'].replace('{/name}', '');
+					let milestonesUrl = body['repository']['milestones_url'].replace('{/number}', '');
+					// Updates the issue based on the current project column
+					updateIssueBasedOnCard(columnUrl, issueUrl, milestonesUrl, labelsUrl, installationId)
 						.then(function (body) {
 							console.log(body);
 						}).catch(function (error) {
@@ -288,42 +288,38 @@ function issueToProject(issue, project, installationId) {
 	});
 }
 
-// Assigns issue to a specific milestone and removes 'Triage' label if exists
-function issueToMilestone(columnUrl, issueUrl, owner, repo, installationId) {
+// Updates an issue based on the current project column
+function updateIssueBasedOnCard(columnUrl, issueUrl, milestonesUrl, labelsUrl, installationId) {
 	return new Promise(function (resolve, reject) {
-		logSection(`ADD ISSUE TO MILESTONE`);
+		logSection(`UPDATE ISSUE BASED ON A PROJECT'S CARD MOVEMENT`);
 		getColumnName(columnUrl, installationId).then(function (columnName) {
 			console.log('');
+			// Moved to column 'Triage'
 			if (columnName == 'Triage') {
-				// TODO: Add label 'Triage'
+				issueToTriage(issueUrl, labelsUrl, installationId).then(function (body) {
+					resolve(body);
+				}).catch(function (error) {
+					reject(error);
+				});
+			// Moved to column 'In progress'
 			} else if (columnName == 'In progress') {
-				// TODO: Add label 'Working'
+				issueToWorking(issueUrl, labelsUrl, installationId).then(function (body) {
+					resolve(body);
+				}).catch(function (error) {
+					reject(error);
+				});
+			// Moved to column 'Done'
 			} else if (columnName == 'Done') {
-				// TODO: Add label 'Done'
-				// if it has the 'Bug' label, add 'Fixed' instead of 'Done'
+				issueToDone(issueUrl, labelsUrl, installationId).then(function (body) {
+					resolve(body);
+				}).catch(function (error) {
+					reject(error);
+				});
 			} else {
-				getMilestoneNumber(owner, repo, columnName, installationId)
-					.then(function (milestoneNumber) {
-						console.log('');
-						getIssueLabels(issueUrl, installationId).then(function (labels) {
-							console.log('');
-							for (i = 0; i < labels.length; i++) {
-								if (labels[i]['name'] == 'Triage') {
-									labels.splice(i, 1);
-									patch(issueUrl, installationId, {
-										'milestone': milestoneNumber,
-										'labels': labels
-									}).then(function (body) {
-										resolve(body);
-									}).catch(function (error) {
-										reject(error);
-									});
-									break;
-								}
-							}
-						}).catch(function (error) {
-							reject(error);
-						});
+				// Moved to a milestone column
+				issueToMilestone(milestonesUrl, issueUrl, columnName, installationId)
+					.then(function (body) {
+						resolve(body);
 					}).catch(function (error) {
 						reject(error);
 					});
@@ -331,6 +327,30 @@ function issueToMilestone(columnUrl, issueUrl, owner, repo, installationId) {
 		}).catch(function (error) {
 			reject(error);
 		});
+	});
+}
+
+// Updates an issue
+function updateIssue(issueUrl, milestoneNumber, labels, installationId) {
+	return new Promise(function (resolve, reject) {
+		if (milestoneNumber == 0) {
+			patch(issueUrl, installationId, {
+				'labels': labels
+			}).then(function (body) {
+				resolve(body);
+			}).catch(function (error) {
+				reject(error);
+			});
+		} else {
+			patch(issueUrl, installationId, {
+				'milestone': milestoneNumber,
+				'labels': labels
+			}).then(function (body) {
+				resolve(body);
+			}).catch(function (error) {
+				reject(error);
+			});
+		}
 	});
 }
 
@@ -348,9 +368,9 @@ function getColumnName(url, installationId) {
 }
 
 // Get milestone number by name
-function getMilestoneNumber(owner, repo, name, installationId) {
+function getMilestoneNumber(milestonesUrl, name, installationId) {
 	return new Promise(function (resolve, reject) {
-		get(gitHubApi + `/repos/${owner}/${repo}/milestones`, installationId).then(function (body) {
+		get(milestonesUrl, installationId).then(function (body) {
 			body = JSON.parse(body);
 			for (i = 0; i < body.length; i++) {
 				if (body[i]['title'] == name) {
@@ -373,6 +393,161 @@ function getIssueLabels(issueUrl, installationId) {
 		}).catch(function (error) {
 			reject(error);
 		});
+	});
+}
+
+// Get a label by name
+function getLabel(labelsUrl, installationId) {
+	return new Promise(function (resolve, reject) {
+		get(labelsUrl, installationId).then(function (body) {
+			resolve(body);
+		}).catch(function (error) {
+			reject(error);
+		});
+	});
+}
+
+// Updates an issue who's project card was moved back to 'Triage'
+function issueToTriage(issueUrl, labelsUrl, installationId) {
+	return new Promise(function (resolve, reject) {
+		getIssueLabels(issueUrl, installationId).then(function (labels) {
+			console.log('');
+			// Removes the following labels if exists
+			for (i = 0; i < labels.length; i++) {
+				if (labels[i]['name'] == 'Working' || labels[i]['name'] == 'Done'
+					|| labels[i]['name'] == 'Fixed') {
+					labels.splice(i, 1);
+					break;
+				}
+			}
+			getLabel(labelsUrl + '/Triage', installationId).then(function (label) {
+				labels.push(JSON.parse(label));
+				console.log('');
+				updateIssue(issueUrl, null, labels, installationId)
+					.then(function (body) {
+						resolve(body);
+					}).catch(function (error) {
+						reject(error);
+					});
+			}).catch(function (error) {
+				reject(error);
+			});
+		}).catch(function (error) {
+			reject(error);
+		});
+	});
+}
+
+// Updates an issue who's project card was moved back to 'In progress'
+function issueToWorking(issueUrl, labelsUrl, installationId) {
+	return new Promise(function (resolve, reject) {
+		getIssueLabels(issueUrl, installationId).then(function (labels) {
+			console.log('');
+			// Removes the following labels if exists
+			for (i = 0; i < labels.length; i++) {
+				if (labels[i]['name'] == 'Triage' || labels[i]['name'] == 'Done'
+					|| labels[i]['name'] == 'Fixed') {
+					labels.splice(i, 1);
+					break;
+				}
+			}
+			getLabel(labelsUrl + '/Working', installationId).then(function (label) {
+				labels.push(JSON.parse(label));
+				console.log('');
+				updateIssue(issueUrl, 0, labels, installationId)
+					.then(function (body) {
+						resolve(body);
+					}).catch(function (error) {
+						reject(error);
+					});
+			}).catch(function (error) {
+				reject(error);
+			});
+		}).catch(function (error) {
+			reject(error);
+		});
+	});
+}
+
+// Updates an issue who's project card was moved back to 'Done'
+function issueToDone(issueUrl, labelsUrl, installationId) {
+	return new Promise(function (resolve, reject) {
+		getIssueLabels(issueUrl, installationId).then(function (labels) {
+			console.log('');
+			// Removes the following labels if exists
+			for (i = 0; i < labels.length; i++) {
+				if (labels[i]['name'] == 'Triage' || labels[i]['name'] == 'Working') {
+					labels.splice(i, 1);
+					break;
+				}
+			}
+			for (i = 0; i < labels.length; i++) {
+				if (labels[i]['name'] == 'Bug') {
+					getLabel(labelsUrl + '/Fixed', installationId).then(function (label) {
+						labels.push(JSON.parse(label));
+						console.log('');
+						updateIssue(issueUrl, 0, labels, installationId)
+							.then(function (body) {
+								resolve(body);
+							}).catch(function (error) {
+								reject(error);
+							});
+					}).catch(function (error) {
+						reject(error);
+					});
+					break;
+				}
+				// Did not find a 'Bug' label
+				if (i == labels.length - 1) {
+					getLabel(labelsUrl + '/Done', installationId).then(function (label) {
+						labels.push(JSON.parse(label));
+						console.log('');
+						updateIssue(issueUrl, 0, labels, installationId)
+							.then(function (body) {
+								resolve(body);
+							}).catch(function (error) {
+								reject(error);
+							});
+					}).catch(function (error) {
+						reject(error);
+					});
+				}
+			}
+		}).catch(function (error) {
+			reject(error);
+		});
+	});
+}
+
+//Updates an issue who's project card was moved to a milestone column
+function issueToMilestone(milestonesUrl, issueUrl, columnName, installationId) {
+	return new Promise(function (resolve, reject) {
+		getMilestoneNumber(milestonesUrl, columnName, installationId)
+			.then(function (milestoneNumber) {
+				console.log('');
+				getIssueLabels(issueUrl, installationId).then(function (labels) {
+					console.log('');
+					// Removes the following labels if exists
+					for (i = 0; i < labels.length; i++) {
+						if (labels[i]['name'] == 'Triage' || labels[i]['name'] == 'Working'
+							|| labels[i]['name'] == 'Done' || labels[i]['name'] == 'Fixed') {
+							labels.splice(i, 1);
+							break;
+						}
+					}
+					// Updates the issue
+					updateIssue(issueUrl, milestoneNumber, labels, installationId)
+						.then(function (body) {
+							resolve(body);
+						}).catch(function (error) {
+							reject(error);
+						});
+				}).catch(function (error) {
+					reject(error);
+				});
+			}).catch(function (error) {
+				reject(error);
+			});
 	});
 }
 
