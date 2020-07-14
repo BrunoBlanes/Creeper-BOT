@@ -38,8 +38,9 @@ const server = http.createServer((req, res) => {
 			// New issue opened
 			if (body['action'] == 'opened' && body['issue']) {
 				let issueId = body['issue']['id'];
+				let labelsUrl = body['issue']['labels_url'].replace('{/name}', '');
 				// Assigns label 'Triage' to issue
-				labelToIssue(body, ['Triage'], installationId).then(function (body) {
+				labelToIssue(labelsUrl, ['Triage'], installationId).then(function (body) {
 					console.log(body);
 				}).then(function () {
 					// Assigns myself to this issue
@@ -238,10 +239,10 @@ function logSection(title) {
 }
 
 // Adds a label to the issue
-function labelToIssue(body, label, installationId) {
+function labelToIssue(labelsUrl, labels, installationId) {
 	return new Promise(function (resolve, reject) {
 		logSection(`ADD "${label}" LABEL TO ISSUE`);
-		post(body['issue']['labels_url'].replace('{/name}', ''), installationId, label)
+		post(labelsUrl, installationId, labels)
 			.then(function (body) {
 				resolve(body);
 			}).catch(function (error) {
