@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.30223.230
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9092AA53-FB77-4645-B42D-1CCCA6BD08BD}") = "GitHub-Bot", "GitHub-Bot.njsproj", "{2D418DB4-AF5D-4253-9726-920F49F97BC9}"
+Project("{9092AA53-FB77-4645-B42D-1CCCA6BD08BD}") = "Creeper-Bot", "Creeper-Bot.njsproj", "{2D418DB4-AF5D-4253-9726-920F49F97BC9}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
