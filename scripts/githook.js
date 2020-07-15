@@ -14,14 +14,11 @@ const { DefaultAzureCredential } = require('@azure/identity');
 // // - AZURE_CLIENT_SECRET: The client secret for the registered application
 
 const credential = new DefaultAzureCredential();
-const vaultName = "Creeper-Bot-KeyVault";
-const url = `https://${vaultName}.vault.azure.net`;
-const client = new SecretClient(url, credential);
-const secretName = "GitHub-Secret";
+const client = new SecretClient('https://Creeper-Bot-KeyVault.vault.azure.net', credential);
 
 module.exports = {
 	ValidateSecret: async function (payload, sig) {
-		let secret = await client.getSecret(secretName);
+		let secret = await client.getSecret("GitHub-Secret");
 		if (payload) {
 			secret = secret['value'];
 			const hmac = crypto.createHmac('sha1', secret);

@@ -1,15 +1,25 @@
-var fs = require('fs');
-var path = require('path');
 var jwt = require('jsonwebtoken');
 var request = require('request-promise');
+const { SecretClient } = require('@azure/keyvault-secrets');
+const { DefaultAzureCredential } = require('@azure/identity');
+// // DefaultAzureCredential expects the following three environment variables:
+// // - AZURE_TENANT_ID: The tenant ID in Azure Active Directory
+// // - AZURE_CLIENT_ID: The application (client) ID registered in the AAD tenant
+// // - AZURE_CLIENT_SECRET: The client secret for the registered application
 
-var cert = fs.readFileSync(path.resolve(__dirname, '../repobot-private-key.pem'));
+const credential = new DefaultAzureCredential();
+const client = new SecretClient('https://Creeper-Bot-KeyVault.vault.azure.net', credential);
 
-var token = jwt.sign({ iss: 72569 },
-	cert, {
-	algorithm: 'RS256',
-	expiresIn: '10m'
-});
+async function generateJwtToken() {
+	let secret = await client.getSecret("GitHub-PrivateKey");
+	let cert = Buffer.from(secret['value']);
+	var token = jwt.sign({ iss: 72569 },
+		cert, {
+		algorithm: 'RS256',
+		expiresIn: '10m'
+	});
+	return token;
+}
 
 // Makes a POST request to GitHub
 module.exports = {
@@ -65,7 +75,7 @@ async function authenticate(installationId) {
 	const options = {
 		method: 'POST',
 		headers: {
-			'Authorization': `Bearer ${token}`,
+			'Authorization': `Bearer ${await generateJwtToken()}`,
 			'User-Agent': 'BrunoBlanes',
 			'Accept': 'application/vnd.github.machine-man-preview+json'
 		},
