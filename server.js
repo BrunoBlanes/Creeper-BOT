@@ -15,7 +15,7 @@ const project = {
 	WINDOWS: 8474428,
 };
 
-http.createServer(function (req, res) {
+http.createServer(async function (req, res) {
 
 	// Only accept on POST requests
 	if (req.method == 'POST') {
@@ -124,11 +124,9 @@ http.createServer(function (req, res) {
 			}
 		});
 
-		res.end();
+		res.end('ok');
 	} else {
-		res.writeHeader(200, {'Content-Type': 'text/html'});
-		res.write('<p>Creeper-Bot is a bot created by Bruno Blanes to automate his personal GitHub account.<p>You can find more about him at <a href="https://github.com/BrunoBlanes/Creeper-Bot/">https://github.com/BrunoBlanes/Creeper-Bot/</a>', 'text/html; charset=utf-8');
-		res.end();
+		res.end('unauthorized');
 	}
 }).listen(port);
 
@@ -137,11 +135,11 @@ function logSection(title) {
 	const maxSize = 115;
 	var textSize = title.length + 4;
 	var margin = '='.repeat((maxSize - textSize) / 2);
-	console.log('\x1b[36m\n\n ' + '='.repeat(maxSize) + '\n');
+	console.log('\x1b[36m\n\n ' + '='.repeat(maxSize) + '');
 	if ((margin.length * 2 + textSize) % 2 == 0) {
-		console.log(` ${margin}  ${title}  ${margin}=\n`);
+		console.log(` ${margin}  ${title}  ${margin}=`);
 	} else {
-		console.log(` ${margin}  ${title}  ${margin}\n`);
+		console.log(` ${margin}  ${title}  ${margin}`);
 	}
-	console.log(' ' + '='.repeat(maxSize) + '\n\x1b[0m\n');
+	console.log(' ' + '='.repeat(maxSize) + '\n\x1b[0m');
 }
