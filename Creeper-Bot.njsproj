@@ -31,13 +31,13 @@ AZURE_TENANT_ID=33d6dc3d-32f7-4da6-803f-134b326a4c73</Environment>
     <DebugSymbols>true</DebugSymbols>
   </PropertyGroup>
   <ItemGroup>
+    <None Include="Creeper-Bot - Web Deploy.pubxml" />
     <Content Include="Web.config">
       <SubType>Code</SubType>
     </Content>
     <None Include="Web.Debug.config">
       <SubType>Code</SubType>
     </None>
-    <None Include="Creeper-Bot - Web Deploy.pubxml" />
     <Content Include="scripts\cards.js">
       <SubType>Code</SubType>
     </Content>

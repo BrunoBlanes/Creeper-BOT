@@ -15,7 +15,7 @@ const project = {
 	WINDOWS: 8474428,
 };
 
-http.createServer(async function (req, res) {
+http.createServer(function (req, res) {
 
 	// Only accept on POST requests
 	if (req.method == 'POST') {
@@ -135,11 +135,11 @@ function logSection(title) {
 	const maxSize = 115;
 	var textSize = title.length + 4;
 	var margin = '='.repeat((maxSize - textSize) / 2);
-	console.log('\x1b[36m\n\n ' + '='.repeat(maxSize) + '');
+	console.log('\x1b[36m\n\n ' + '='.repeat(maxSize) + '\n');
 	if ((margin.length * 2 + textSize) % 2 == 0) {
-		console.log(` ${margin}  ${title}  ${margin}=`);
+		console.log(` ${margin}  ${title}  ${margin}=\n`);
 	} else {
-		console.log(` ${margin}  ${title}  ${margin}`);
+		console.log(` ${margin}  ${title}  ${margin}\n`);
 	}
-	console.log(' ' + '='.repeat(maxSize) + '\n\x1b[0m');
+	console.log(' ' + '='.repeat(maxSize) + '\n\x1b[0m\n');
 }
