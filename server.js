@@ -124,9 +124,11 @@ http.createServer(function (req, res) {
 			}
 		});
 
-		res.end('ok');
+		res.end();
 	} else {
-		res.end('Creeper Bot is a bot created by Bruno Blanes to automate his personal GitHub account.\nYou can find more about him at https://github.com/BrunoBlanes/Creeper-Bot/');
+		res.writeHeader(200, {'Content-Type': 'text/html'});
+		res.write('<p>Creeper-Bot is a bot created by Bruno Blanes to automate his personal GitHub account.<p>You can find more about him at <a href="https://github.com/BrunoBlanes/Creeper-Bot/">https://github.com/BrunoBlanes/Creeper-Bot/</a>', 'text/html; charset=utf-8');
+		res.end();
 	}
 }).listen(port);
 
