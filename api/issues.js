@@ -26,7 +26,7 @@ module.exports = {
 	// Updates an issue who's project card was moved to 'Done'
 	ToDone: async function (issueUrl, labelsUrl, installationId) {
 		try {
-			let labels = await spliceLabels(['Triage', 'Working'], ['Awaiting Pull Request'], issueUrl, labelsUrl, installationId);
+			let labels = await spliceLabels(['Triage', 'Working'], null, issueUrl, labelsUrl, installationId);
 			for (var i = 0; i < labels.length; i++) {
 				// Adds 'Fixed' if 'Bug' label is present
 				if (labels[i]['name'] == 'Bug') {

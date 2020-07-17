@@ -15,7 +15,7 @@ module.exports = {
 
 	// Get project id by project name
 	GetProjectId: async function (projectName, reposUrl, installationId) {
-		let projects = await httpClient.Get(reposUrl, installationId);
+		let projects = JSON.parse(await httpClient.Get(reposUrl + '/projects', installationId));
 
 		// Finds the proper project id
 		for (var i = 0; i < projects.length; i++) {
@@ -29,7 +29,7 @@ module.exports = {
 
 	// Get project column id by column name
 	GetColumnId: async function (columnName, projectId, installationId) {
-		let columns = await httpClient.Get(baseUrl + `/${projectId}/columns`, installationId);
+		let columns = JSON.parse(await httpClient.Get(baseUrl + `/${projectId}/columns`, installationId));
 
 		// Finds the proper column id
 		for (var i = 0; i < columns.length; i++) {

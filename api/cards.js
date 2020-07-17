@@ -1,11 +1,12 @@
 var projects = require('./projects');
 var httpClient = require(__dirname + '/../functions/httpClient');
+const baseUrl = 'https://api.github.com/projects';
 
 module.exports = {
 	// Adds the issue to a specific project column
 	CreateFromIssue: async function (issueId, project, installationId) {
 		try {
-			let body = await httpClient.Post(`https://api.github.com/projects/columns/${project}/cards`, installationId, {
+			let body = await httpClient.Post(baseUrl + `/columns/${project}/cards`, installationId, {
 				'content_id': issueId,
 				'content_type': 'Issue'
 			});
@@ -17,7 +18,7 @@ module.exports = {
 
 	// Get project card id by column id and issue url
 	GetProjectCardId: async function (columnId, issueUrl, installationId) {
-		let cards = await httpClient.Get(baseUrl + `/columns/${columnId}/cards`, installationId);
+		let cards = JSON.parse(await httpClient.Get(baseUrl + `/columns/${columnId}/cards`, installationId));
 
 		// Finds the proper card
 		for (var k = 0; k < cards.length; k++) {

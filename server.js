@@ -88,12 +88,12 @@ http.createServer(function (req, res) {
 
 					// Label was added to this issue
 					} else if (body['action'] == 'labeled') {
-						// Found label 'Awaiting Pull Request' 
+						// Found label 'Awaiting Pull Request'
 						if (body['label']['name'] == 'Awaiting Pull Request') {
+							logSection(`MOVE CARD TO COLUMN "DONE"`);
 							let columnName = getColumnName(body['issue']);
 							var projectName = getAssignedProject(body['issue']['labels']);
-							var response = await cards.MoveCardToColumn(columnName, 'Done', projectName, issueUrl, reposUrl, installationId);
-							console.log(respose);
+							await cards.MoveCardToColumn(columnName, 'Done', projectName, issueUrl, reposUrl, installationId);
 						}
 
 					// Handle issue being closed
@@ -146,24 +146,49 @@ http.createServer(function (req, res) {
 
 					// Loop through every commit in this push
 					for (var i = 0; i < commits.length; i++) {
-						let commitMessage = commits[i]['message'];
-						const regex = /#[1-9][0-9]*/;
+						let commitMessage = commits[i]['message'].toLowerCase();
+						let keywordIndexes = [];
 
 						// Loop through all the known keywords
 						for (var j = 0; j < keywords.length; j++) {
-							let keywordIndex = commitMessage.toLowerCase().indexOf(keywords[j]);
+							let keywordIndex = commitMessage.indexOf(keywords[j]);
+
+							// Found keyword
+							while (keywordIndex !== -1) {
+
+								// Just add if array is empty
+								if (keywordIndexes.length == 0) {
+									keywordIndexes.push(keywordIndex);
+								} else {
+									for (var k = 0; k < keywordIndexes.length; k++) {
+
+										// Only add if not already added (could happen)
+										if (keywordIndexes[k]['index'] != keywordIndex['index']) {
+											keywordIndexes.push(keywordIndex);
+										}
+									}
+								}
+
+								// Keep looking through the commit comment for the same keyword
+								keywordIndex = commitMessage.indexOf(keywords[j], keywordIndex + keywords[j].length);
+							}
+						}
+
+						keywordIndexes.sort(function (a, b) {
+							return a - b;
+						});
+
+						for (var j = 0; j < keywordIndexes.length; j++) {
 
 							// Keyword is present in commit message
-							if (keywordIndex !== -1) {
-								commitMessage = commitMessage.substring(keywordIndex + keywords[j].length);
-								let issue = commitMessage.match(regex);
-								let issueNumber = issue[0].substring(1);
+							let message = commitMessage.substring(keywordIndexes[j]);
+							let issue = message.match(/#[1-9][0-9]*/g);
+							let issueNumber = issue[0].substring(1);
 
-								// Add label 'Awaiting Pull Request' to issues with keywords
-								logSection(`ADDING LABEL "AWAITING PULL REQUEST" TO ISSUE #${issueNumber}`);
-								let response = await issues.AssignLabelsToIssue('Awaiting Pull Request', issueUrl + `/${issueNumber}`, installationId);
-								console.log(response);
-							}
+							// Add label 'Awaiting Pull Request' to issues with keywords
+							logSection(`ADDING LABEL "AWAITING PULL REQUEST" TO ISSUE #${issueNumber}`);
+							let response = await issues.AssignLabelsToIssue(['Awaiting Pull Request'], issueUrl + `/${issueNumber}`, installationId);
+							console.log(response);
 						}
 					}
 				}
@@ -217,8 +242,7 @@ function getColumnName(issue) {
 			return 'In progress';
 		} else if (labels[i]['name'] == 'Complete' || labels[i]['name'] == 'Fixed') {
 			return 'Done';
-		} else {
-			return issue['milestone']['title'];
 		}
 	}
+	return issue['milestone']['title'];
 }
