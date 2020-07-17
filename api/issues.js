@@ -87,6 +87,17 @@ module.exports = {
 			return err;
 		}
 	},
+
+	// Removes a set of labels from an issue
+	RemoveLabel: async function (removeLabels, issueUrl, installationId) {
+		try {
+			labels = await removeLabels(removeLabels, issueUrl, installationId);
+			let body = await updateIssue(issueUrl, 0, labels, installationId);
+			return body;
+		} catch (err) {
+			return err;
+		}
+	},
 };
 
 // Returns a list of labels from an issue

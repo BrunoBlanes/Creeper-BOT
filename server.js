@@ -39,6 +39,7 @@ http.createServer(function (req, res) {
 
 					// New issue opened
 					if (body['action'] == 'opened') {
+
 						// Assigns label 'Triage' to issue
 						logSection('ASSIGN LABEL "TRIAGE" TO NEW ISSUE');
 						let response = await issues.AssignLabelsToIssue(['Triage'], issueUrl, installationId);
@@ -58,34 +59,39 @@ http.createServer(function (req, res) {
 								console.log(response);
 								break;
 
-								// Assigns this issue to the 'Server' project
+							// Assigns this issue to the 'Server' project
 							} else if (labels[i]['name'] == 'API' || labels[i]['name'] == 'Database') {
 								response = await cards.CreateFromIssue(issueId, project.API, installationId);
 								console.log(response);
 								break;
 
-								// Assigns this issue to the 'Windows' project
+							// Assigns this issue to the 'Windows' project
 							} else if (labels[i]['name'] == 'Windows') {
 								response = await cards.CreateFromIssue(issueId, project.WINDOWS, installationId);
 								console.log(response);
 								break;
 
-								// Assigns this issue to the 'Android' project
+							// Assigns this issue to the 'Android' project
 							} else if (labels[i]['name'] == 'Android') {
 								response = await cards.CreateFromIssue(issueId, project.ANDROID, installationId);
 								console.log(response);
 								break;
 
-								// Assigns this issue to the 'iOS' project
+							// Assigns this issue to the 'iOS' project
 							} else if (labels[i]['name'] == 'iOS') {
 								response = await cards.CreateFromIssue(issueId, project.IOS, installationId);
 								console.log(response);
 								break;
 							}
 						}
+
+					// Handle issue being closed
+					} else if (body['action'] == 'closed') {
+						response = await issues.RemoveLabel(['Awaiting Pull Request', issueUrl, installationId]);
+						console.log(response);
 					}
 
-					// Handle project card events
+				// Handle project card events
 				} else if (req.headers['x-github-event'] == 'project_card') {
 
 					// If card is related to an issue
@@ -121,7 +127,7 @@ http.createServer(function (req, res) {
 						}
 					}
 
-					// Handle pull request events
+				// Handle pull request events
 				} else if (req.headers['x-github-event'] == 'pull_request') {
 
 				}
