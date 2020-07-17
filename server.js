@@ -91,7 +91,14 @@ http.createServer(function (req, res) {
 						// Found label 'Awaiting Pull Request'
 						if (body['label']['name'] == 'Awaiting Pull Request') {
 							logSection(`MOVE CARD TO COLUMN "DONE"`);
-							let columnName = getColumnName(body['issue']);
+							let columnName = '';
+
+							try {
+								columnName = getColumnName(body['issue']);
+							} catch (err) {
+								console.log(err);
+							}
+
 							var projectName = getAssignedProject(body['issue']['labels']);
 							await cards.MoveCardToColumn(columnName, 'Done', projectName, issueUrl, reposUrl, installationId);
 						}
@@ -163,7 +170,7 @@ http.createServer(function (req, res) {
 									for (var k = 0; k < keywordIndexes.length; k++) {
 
 										// Only add if not already added (could happen)
-										if (keywordIndexes[k] != keywordIndex) {
+										if (keywordIndexes[k] == keywordIndex) {
 											break;
 										} else if (k == keywordIndexes.length - 1) {
 											keywordIndexes.push(keywordIndex);
@@ -203,7 +210,7 @@ http.createServer(function (req, res) {
 		res.write('<p>Creeper-Bot is a bot created by Bruno Blanes to automate his personal GitHub account.<p>You can find more about him at <a href="https://github.com/BrunoBlanes/Creeper-Bot/">https://github.com/BrunoBlanes/Creeper-Bot/</a>', 'text/html; charset=utf-8');
 		res.end();
 	}
-}).listen(5001);
+}).listen(port);
 
 // Adds a cool section divider to the log
 function logSection(title) {
@@ -246,5 +253,10 @@ function getColumnName(issue) {
 			return 'Done';
 		}
 	}
-	return issue['milestone']['title'];
+
+	if (issue['milestone']['title']) {
+		return issue['milestone']['title'];
+	} else {
+		throw new Error('Could not find the proper label indication a column name');
+	}
 }
