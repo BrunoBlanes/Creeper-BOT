@@ -1,26 +1,27 @@
 {
-  "name": "creeper-bot",
-  "version": "0.1.0",
-  "description": "Creeper-Bot",
-  "main": "server.js",
-  "author": "Bruno Blanes",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/BrunoBlanes/GitHub-Bot.git"
-  },
-  "keywords": [
-    "Bot"
-  ],
-  "license": "ISC",
-  "bugs": {
-    "url": "https://github.com/BrunoBlanes/GitHub-Bot/issues"
-  },
-  "homepage": "https://github.com/BrunoBlanes/GitHub-Bot#readme",
-  "dependencies": {
-    "@azure/identity": "^1.0.3",
-    "@azure/keyvault-secrets": "^4.0.4",
-    "crypto": "^1.0.1",
-    "jsonwebtoken": "^8.5.1",
-    "request-promise": "^4.2.5"
-  }
+	"name": "creeper-bot",
+	"version": "0.1.0",
+	"description": "Creeper-Bot",
+	"main": "server.js",
+	"author": "Bruno Blanes",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/BrunoBlanes/GitHub-Bot.git"
+	},
+	"keywords": [
+		"Bot"
+	],
+	"license": "ISC",
+	"bugs": {
+		"url": "https://github.com/BrunoBlanes/GitHub-Bot/issues"
+	},
+	"homepage": "https://github.com/BrunoBlanes/GitHub-Bot#readme",
+	"dependencies": {
+		"@azure/identity": "^1.0.3",
+		"@azure/keyvault-secrets": "^4.0.4",
+		"crypto": "^1.0.1",
+		"jsonwebtoken": "^8.5.1",
+		"request": "^2.88.2",
+		"request-promise": "^4.2.5"
+	}
 }
