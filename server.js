@@ -129,7 +129,7 @@ http.createServer(function (req, res) {
 
 				// Handle pull request events
 				} else if (req.headers['x-github-event'] == 'push') {
-					const keywords = ['close', 'closes', 'closed', 'fix', 'fixes', 'fixed', 'resolve', 'resolves', 'resolved'];
+					const keywords = ['closed', 'closes', 'close', 'fixed', 'fixes', 'fix', 'resolved', 'resolves', 'resolve'];
 					let commits = body['commits'];
 
 					// For each commit
@@ -142,8 +142,10 @@ http.createServer(function (req, res) {
 
 							// Keyword is present in commit message
 							if (keywordIndex !== -1) {
-								let issueNumber = commitMessage.indexOf('#', keywordIndex);
-								console.log(issueNumber);
+								const regex = /#[1-9][0-9]*/;
+								commitMessage = commitMessage.substring(keywordIndex + keywords[j].length);
+								let issues = commitMessage.match(regex);
+								console.log(issues);
 							}
 						}
 					}
