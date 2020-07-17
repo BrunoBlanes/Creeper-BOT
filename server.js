@@ -134,7 +134,7 @@ http.createServer(function (req, res) {
 		res.write('<p>Creeper-Bot is a bot created by Bruno Blanes to automate his personal GitHub account.<p>You can find more about him at <a href="https://github.com/BrunoBlanes/Creeper-Bot/">https://github.com/BrunoBlanes/Creeper-Bot/</a>', 'text/html; charset=utf-8');
 		res.end();
 	}
-}).listen(5001);
+}).listen(port);
 
 // Adds a cool section divider to the log
 function logSection(title) {
