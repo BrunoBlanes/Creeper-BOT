@@ -22,6 +22,7 @@ http.createServer(function (req, res) {
 		let body = '';
 		req.on('data', chunk => { body += chunk; });
 		req.on('end', async () => {
+			console.log(body);
 
 			// Validates webhook secret and reject if invalid
 			if (await githook.ValidateSecret(body, req.headers['x-hub-signature'])) {
