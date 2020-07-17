@@ -163,7 +163,9 @@ http.createServer(function (req, res) {
 									for (var k = 0; k < keywordIndexes.length; k++) {
 
 										// Only add if not already added (could happen)
-										if (keywordIndexes[k]['index'] != keywordIndex['index']) {
+										if (keywordIndexes[k] != keywordIndex) {
+											break;
+										} else if (k == keywordIndexes.length - 1) {
 											keywordIndexes.push(keywordIndex);
 										}
 									}
