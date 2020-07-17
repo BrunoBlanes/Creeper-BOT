@@ -22,7 +22,6 @@ http.createServer(function (req, res) {
 		let body = '';
 		req.on('data', chunk => { body += chunk; });
 		req.on('end', async () => {
-			console.log(body);
 
 			// Validates webhook secret and reject if invalid
 			if (await githook.ValidateSecret(body, req.headers['x-hub-signature'])) {
@@ -97,13 +96,13 @@ http.createServer(function (req, res) {
 
 					// If card is related to an issue
 					if (body['project_card']['content_url']) {
+						logSection(`UPDATE AN ISSUE WHO'S CARD WAS MOVED`);
 						let issueUrl = body['project_card']['content_url'];
 						let columnUrl = body['project_card']['column_url'];
 						let labelsUrl = body['repository']['labels_url'].replace('{/name}', '');
 						let milestonesUrl = body['repository']['milestones_url'].replace('{/number}', '');
 
-						// Updates the issue based on the current project column
-						logSection(`UPDATE AN ISSUE WHO'S CARD WAS MOVED`);
+						// Get's the current project's column name
 						let columnName = await cards.GetColumnName(columnUrl, installationId);
 
 						// Moved to column 'Triage'
@@ -111,18 +110,18 @@ http.createServer(function (req, res) {
 							let response = await issues.ToTriage(issueUrl, labelsUrl, installationId);
 							console.log(response);
 
-							// Moved to column 'In progress'
+						// Moved to column 'In progress'
 						} else if (columnName == 'In progress') {
 							let response = await issues.ToWorking(issueUrl, labelsUrl, installationId);
 							console.log(response);
 
-							// Moved to column 'Done'
+						// Moved to column 'Done'
 						} else if (columnName == 'Done') {
 							let response = await issues.ToDone(issueUrl, labelsUrl, installationId);
 							console.log(response);
-						} else {
 
-							// Moved to a milestone column
+						// Moved to a milestone column
+						} else {
 							let response = await issues.ToMilestone(columnName, milestonesUrl, issueUrl, labelsUrl, installationId);
 							console.log(response);
 						}
@@ -130,7 +129,24 @@ http.createServer(function (req, res) {
 
 				// Handle pull request events
 				} else if (req.headers['x-github-event'] == 'push') {
-					console.log(body);
+					const keywords = ['close', 'closes', 'closed', 'fix', 'fixes', 'fixed', 'resolve', 'resolves', 'resolved'];
+					let commits = body['commits'];
+
+					// For each commit
+					for (var i = 0; i < commits.length; i++) {
+						let commitMessage = commits[i]['message'];
+
+						// For each keyword
+						for (var j = 0; j < keywords.length; j++) {
+							let keywordIndex = commitMessage.indexOf(keywords[j]);
+
+							// Keyword is present in commit message
+							if (keywordIndex !== -1) {
+								let issueNumber = commitMessage.indexOf('#', keywordIndex);
+								console.log(issueNumber);
+							}
+						}
+					}
 				}
 			}
 		});
