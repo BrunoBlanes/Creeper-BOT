@@ -31,16 +31,26 @@ AZURE_TENANT_ID=33d6dc3d-32f7-4da6-803f-134b326a4c73</Environment>
     <DebugSymbols>true</DebugSymbols>
   </PropertyGroup>
   <ItemGroup>
-    <Content Include="scripts\cards.js">
+    <None Include="Creeper-Bot - Web Deploy.pubxml" />
+    <Content Include="api\pullrequest.js">
       <SubType>Code</SubType>
     </Content>
-    <Content Include="scripts\githook.js">
+    <Content Include="Web.config">
       <SubType>Code</SubType>
     </Content>
-    <Content Include="scripts\httpClient.js">
+    <None Include="Web.Debug.config">
+      <SubType>Code</SubType>
+    </None>
+    <Content Include="api\cards.js">
       <SubType>Code</SubType>
     </Content>
-    <Content Include="scripts\issues.js">
+    <Content Include="functions\githook.js">
+      <SubType>Code</SubType>
+    </Content>
+    <Content Include="functions\httpClient.js">
+      <SubType>Code</SubType>
+    </Content>
+    <Content Include="api\issues.js">
       <SubType>Code</SubType>
     </Content>
     <Content Include="server.js" />
@@ -49,7 +59,8 @@ AZURE_TENANT_ID=33d6dc3d-32f7-4da6-803f-134b326a4c73</Environment>
     <Content Include="repobot-private-key.pem" />
   </ItemGroup>
   <ItemGroup>
-    <Folder Include="scripts\" />
+    <Folder Include="functions\" />
+    <Folder Include="api\" />
   </ItemGroup>
   <Import Project="$(VSToolsPath)\Node.js Tools\Microsoft.NodejsToolsV2.targets" />
   <ProjectExtensions>
