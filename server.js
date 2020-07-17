@@ -129,8 +129,8 @@ http.createServer(function (req, res) {
 					}
 
 				// Handle pull request events
-				} else if (req.headers['x-github-event'] == 'pull_request') {
-
+				} else if (req.headers['x-github-event'] == 'push') {
+					console.log(body);
 				}
 			}
 		});
