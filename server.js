@@ -1,9 +1,9 @@
 'use strict';
 var http = require('http');
 
-var githook = require('./scripts/githook');
-var issues = require('./scripts/issues');
-var cards = require('./scripts/cards');
+var githook = require('./functions/githook');
+var issues = require('./api/issues');
+var cards = require('./api/cards');
 var port = process.env.PORT || 1337;
 
 // Project's "Triage" column id
@@ -54,38 +54,38 @@ http.createServer(function (req, res) {
 
 							// Assigns this issue to the 'WebAssembly' project
 							if (labels[i]['name'] == 'Identity' || labels[i]['name'] == 'WebAssembly') {
-								response = await cards.FromIssue(issueId, project.WASM, installationId);
+								response = await cards.CreateFromIssue(issueId, project.WASM, installationId);
 								console.log(response);
 								break;
 
 								// Assigns this issue to the 'Server' project
 							} else if (labels[i]['name'] == 'API' || labels[i]['name'] == 'Database') {
-								response = await cards.FromIssue(issueId, project.API, installationId);
+								response = await cards.CreateFromIssue(issueId, project.API, installationId);
 								console.log(response);
 								break;
 
 								// Assigns this issue to the 'Windows' project
 							} else if (labels[i]['name'] == 'Windows') {
-								response = await cards.FromIssue(issueId, project.WINDOWS, installationId);
+								response = await cards.CreateFromIssue(issueId, project.WINDOWS, installationId);
 								console.log(response);
 								break;
 
 								// Assigns this issue to the 'Android' project
 							} else if (labels[i]['name'] == 'Android') {
-								response = await cards.FromIssue(issueId, project.ANDROID, installationId);
+								response = await cards.CreateFromIssue(issueId, project.ANDROID, installationId);
 								console.log(response);
 								break;
 
 								// Assigns this issue to the 'iOS' project
 							} else if (labels[i]['name'] == 'iOS') {
-								response = await cards.FromIssue(issueId, project.IOS, installationId);
+								response = await cards.CreateFromIssue(issueId, project.IOS, installationId);
 								console.log(response);
 								break;
 							}
 						}
 					}
 
-				// Handle project card events
+					// Handle project card events
 				} else if (req.headers['x-github-event'] == 'project_card') {
 
 					// If card is related to an issue
@@ -120,6 +120,10 @@ http.createServer(function (req, res) {
 							console.log(response);
 						}
 					}
+
+					// Handle pull request events
+				} else if (req.headers['x-github-event'] == 'pull_request') {
+
 				}
 			}
 		});
@@ -130,18 +134,18 @@ http.createServer(function (req, res) {
 		res.write('<p>Creeper-Bot is a bot created by Bruno Blanes to automate his personal GitHub account.<p>You can find more about him at <a href="https://github.com/BrunoBlanes/Creeper-Bot/">https://github.com/BrunoBlanes/Creeper-Bot/</a>', 'text/html; charset=utf-8');
 		res.end();
 	}
-}).listen(port);
+}).listen(5001);
 
 // Adds a cool section divider to the log
 function logSection(title) {
 	const maxSize = 115;
 	var textSize = title.length + 4;
 	var margin = '='.repeat((maxSize - textSize) / 2);
-	console.log('\x1b[36m\n\n ' + '='.repeat(maxSize) + '\n');
+	console.log('\n\n\x1b[36m ' + '='.repeat(maxSize) + '');
 	if ((margin.length * 2 + textSize) % 2 == 0) {
-		console.log(` ${margin}  ${title}  ${margin}=\n`);
+		console.log(` ${margin}  ${title}  ${margin}=`);
 	} else {
-		console.log(` ${margin}  ${title}  ${margin}\n`);
+		console.log(` ${margin}  ${title}  ${margin}`);
 	}
 	console.log(' ' + '='.repeat(maxSize) + '\n\x1b[0m\n');
 }

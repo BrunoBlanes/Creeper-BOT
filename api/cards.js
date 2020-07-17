@@ -1,8 +1,8 @@
-var httpClient = require('./httpClient');
+var httpClient = require(__dirname + '/../functions/httpClient');
 
 module.exports = {
 	// Adds the issue to a specific project column
-	FromIssue: async function (issueId, project, installationId) {
+	CreateFromIssue: async function (issueId, project, installationId) {
 		try {
 			let body = await httpClient.Post(`https://api.github.com/projects/columns/${project}/cards`, installationId, {
 				'content_id': issueId,

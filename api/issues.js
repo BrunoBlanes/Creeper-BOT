@@ -1,4 +1,4 @@
-var httpClient = require('./httpClient');
+var httpClient = require(__dirname + '/../functions/httpClient');
 
 module.exports = {
 	// Updates an issue who's project card was moved back to 'Triage'
@@ -26,21 +26,22 @@ module.exports = {
 	// Updates an issue who's project card was moved to 'Done'
 	ToDone: async function (issueUrl, labelsUrl, installationId) {
 		try {
-			let labels = await spliceLabels(['Triage', 'Working'], null, issueUrl, labelsUrl, installationId);
+			let labels = await spliceLabels(['Triage', 'Working'], ['Awaiting Pull Request'], issueUrl, labelsUrl, installationId);
 			for (var i = 0; i < labels.length; i++) {
 				// Adds 'Fixed' if 'Bug' label is present
 				if (labels[i]['name'] == 'Bug') {
 					labels = await addLabels(['Fixed'], 0, labelsUrl, installationId, labels);
 					let body = updateIssue(issueUrl, 0, labels, installationId);
-						return body;
+					return body;
 					break;
 				}
 
-				// Adds 'Done' if 'Bug' is not present
-				if (i == labels.length - 1) {
-					labels = await addLabels(['Done'], 0, labelsUrl, installationId, labels);
+				// Adds 'Complete' if 'Task' is present
+				if (labels[i]['name'] == 'Task') {
+					labels = await addLabels(['Complete'], 0, labelsUrl, installationId, labels);
 					let body = await updateIssue(issueUrl, 0, labels, installationId);
 					return body;
+					break;
 				}
 			}
 		} catch(err) {
