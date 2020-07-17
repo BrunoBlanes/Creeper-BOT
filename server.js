@@ -2,6 +2,7 @@
 var http = require('http');
 
 var githook = require('./functions/githook');
+var projects = require('./api/projects');
 var issues = require('./api/issues');
 var cards = require('./api/cards');
 var port = process.env.PORT || 1337;
@@ -59,30 +60,40 @@ http.createServer(function (req, res) {
 								console.log(response);
 								break;
 
-							// Assigns this issue to the 'Server' project
+								// Assigns this issue to the 'Server' project
 							} else if (labels[i]['name'] == 'API' || labels[i]['name'] == 'Database') {
 								response = await cards.CreateFromIssue(issueId, project.API, installationId);
 								console.log(response);
 								break;
 
-							// Assigns this issue to the 'Windows' project
+								// Assigns this issue to the 'Windows' project
 							} else if (labels[i]['name'] == 'Windows') {
 								response = await cards.CreateFromIssue(issueId, project.WINDOWS, installationId);
 								console.log(response);
 								break;
 
-							// Assigns this issue to the 'Android' project
+								// Assigns this issue to the 'Android' project
 							} else if (labels[i]['name'] == 'Android') {
 								response = await cards.CreateFromIssue(issueId, project.ANDROID, installationId);
 								console.log(response);
 								break;
 
-							// Assigns this issue to the 'iOS' project
+								// Assigns this issue to the 'iOS' project
 							} else if (labels[i]['name'] == 'iOS') {
 								response = await cards.CreateFromIssue(issueId, project.IOS, installationId);
 								console.log(response);
 								break;
 							}
+						}
+
+					// Label was added to this issue
+					} else if (body['action'] == 'labeled') {
+						// Found label 'Awaiting Pull Request' 
+						if (body['label']['name'] == 'Awaiting Pull Request') {
+							let columnName = getColumnName(body['issue']);
+							var projectName = getAssignedProject(body['issue']['labels']);
+							var response = await cards.MoveCardToColumn(columnName, 'Done', projectName, issueUrl, reposUrl, installationId);
+							console.log(respose);
 						}
 
 					// Handle issue being closed
@@ -103,7 +114,7 @@ http.createServer(function (req, res) {
 						let milestonesUrl = body['repository']['milestones_url'].replace('{/number}', '');
 
 						// Get's the current project's column name
-						let columnName = await cards.GetColumnName(columnUrl, installationId);
+						let columnName = await projects.GetColumnName(columnUrl, installationId);
 
 						// Moved to column 'Triage'
 						if (columnName == 'Triage') {
@@ -130,22 +141,28 @@ http.createServer(function (req, res) {
 				// Handle pull request events
 				} else if (req.headers['x-github-event'] == 'push') {
 					const keywords = ['closed', 'closes', 'close', 'fixed', 'fixes', 'fix', 'resolved', 'resolves', 'resolve'];
+					let issueUrl = body['repository']['issues_url'].replace('{/number}', '');
 					let commits = body['commits'];
 
-					// For each commit
+					// Loop through every commit in this push
 					for (var i = 0; i < commits.length; i++) {
 						let commitMessage = commits[i]['message'];
+						const regex = /#[1-9][0-9]*/;
 
-						// For each keyword
+						// Loop through all the known keywords
 						for (var j = 0; j < keywords.length; j++) {
-							let keywordIndex = commitMessage.indexOf(keywords[j]);
+							let keywordIndex = commitMessage.toLowerCase().indexOf(keywords[j]);
 
 							// Keyword is present in commit message
 							if (keywordIndex !== -1) {
-								const regex = /#[1-9][0-9]*/;
 								commitMessage = commitMessage.substring(keywordIndex + keywords[j].length);
-								let issues = commitMessage.match(regex);
-								console.log(issues);
+								let issue = commitMessage.match(regex);
+								let issueNumber = issue[0].substring(1);
+
+								// Add label 'Awaiting Pull Request' to issues with keywords
+								logSection(`ADDING LABEL "AWAITING PULL REQUEST" TO ISSUE #${issueNumber}`);
+								let response = await issues.AssignLabelsToIssue('Awaiting Pull Request', issueUrl + `/${issueNumber}`, installationId);
+								console.log(response);
 							}
 						}
 					}
@@ -173,4 +190,35 @@ function logSection(title) {
 		console.log(` ${margin}  ${title}  ${margin}`);
 	}
 	console.log(' ' + '='.repeat(maxSize) + '\n\x1b[0m\n');
+}
+
+function getAssignedProject(labels) {
+	for (var i = 0; i < labels.length; i++) {
+		if (labels[i]['name'] == 'Identity' || labels[i]['name'] == 'WebAssembly') {
+			return 'WebAssembly';
+		} else if (labels[i]['name'] == 'API' || labels[i]['name'] == 'Database') {
+			return 'Back-End';
+		} else if (labels[i]['name'] == 'Windows') {
+			return 'Windows';
+		} else if (labels[i]['name'] == 'Android') {
+			return 'Android';
+		} else if (labels[i]['name'] == 'iOS') {
+			return 'iOS';
+		}
+	}
+}
+
+function getColumnName(issue) {
+	let labels = issue['labels'];
+	for (var i = 0; i < labels.length; i++) {
+		if (labels[i]['name'] == 'Triage') {
+			return 'Triage';
+		} else if (labels[i]['name'] == 'Working') {
+			return 'In progress';
+		} else if (labels[i]['name'] == 'Complete' || labels[i]['name'] == 'Fixed') {
+			return 'Done';
+		} else {
+			return issue['milestone']['title'];
+		}
+	}
 }
