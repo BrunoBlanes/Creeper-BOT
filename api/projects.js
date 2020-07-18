@@ -5,8 +5,7 @@ module.exports = {
 	// Get project column name by column url
 	GetColumnName: async function (columnUrl, installationId) {
 		try {
-			let body = await httpClient.Get(columnUrl, installationId);
-			body = JSON.parse(body);
+			let body = JSON.parse(await httpClient.Get(columnUrl, installationId));
 			return body['name'];
 		} catch (err) {
 			return err;

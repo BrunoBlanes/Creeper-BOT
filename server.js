@@ -1,10 +1,13 @@
 'use strict';
 var http = require('http');
 
+var httpClient = require('./functions/httpClient');
 var githook = require('./functions/githook');
 var projects = require('./api/projects');
+var commits = require('./api/commits');
 var issues = require('./api/issues');
 var cards = require('./api/cards');
+
 var port = process.env.PORT || 1337;
 
 // Project's "Triage" column id
@@ -60,25 +63,25 @@ http.createServer(function (req, res) {
 								console.log(response);
 								break;
 
-								// Assigns this issue to the 'Server' project
+							// Assigns this issue to the 'Server' project
 							} else if (labels[i]['name'] == 'API' || labels[i]['name'] == 'Database') {
 								response = await cards.CreateFromIssue(issueId, project.API, installationId);
 								console.log(response);
 								break;
 
-								// Assigns this issue to the 'Windows' project
+							// Assigns this issue to the 'Windows' project
 							} else if (labels[i]['name'] == 'Windows') {
 								response = await cards.CreateFromIssue(issueId, project.WINDOWS, installationId);
 								console.log(response);
 								break;
 
-								// Assigns this issue to the 'Android' project
+							// Assigns this issue to the 'Android' project
 							} else if (labels[i]['name'] == 'Android') {
 								response = await cards.CreateFromIssue(issueId, project.ANDROID, installationId);
 								console.log(response);
 								break;
 
-								// Assigns this issue to the 'iOS' project
+							// Assigns this issue to the 'iOS' project
 							} else if (labels[i]['name'] == 'iOS') {
 								response = await cards.CreateFromIssue(issueId, project.IOS, installationId);
 								console.log(response);
@@ -88,6 +91,7 @@ http.createServer(function (req, res) {
 
 					// Label was added to this issue
 					} else if (body['action'] == 'labeled') {
+
 						// Found label 'Awaiting Pull Request'
 						if (body['label']['name'] == 'Awaiting Pull Request') {
 							logSection(`MOVE CARD TO COLUMN "DONE"`);
@@ -112,91 +116,97 @@ http.createServer(function (req, res) {
 				// Handle project card events
 				} else if (req.headers['x-github-event'] == 'project_card') {
 
-					// If card is related to an issue
+					// Only if card is based on an issue
 					if (body['project_card']['content_url']) {
-						logSection(`UPDATE AN ISSUE WHO'S CARD WAS MOVED`);
-						let issueUrl = body['project_card']['content_url'];
-						let columnUrl = body['project_card']['column_url'];
-						let labelsUrl = body['repository']['labels_url'].replace('{/name}', '');
-						let milestonesUrl = body['repository']['milestones_url'].replace('{/number}', '');
 
-						// Get's the current project's column name
-						let columnName = await projects.GetColumnName(columnUrl, installationId);
+						// Handle card moved events
+						if (body['action'] == 'moved') {
+							logSection(`UPDATE AN ISSUE WHO'S CARD WAS MOVED`);
+							let issueUrl = body['project_card']['content_url'];
+							let columnUrl = body['project_card']['column_url'];
+							let labelsUrl = body['repository']['labels_url'].replace('{/name}', '');
+							let milestonesUrl = body['repository']['milestones_url'].replace('{/number}', '');
 
-						// Moved to column 'Triage'
-						if (columnName == 'Triage') {
-							let response = await issues.ToTriage(issueUrl, labelsUrl, installationId);
-							console.log(response);
+							// Get the current card's column name
+							let columnName = await projects.GetColumnName(columnUrl, installationId);
 
-						// Moved to column 'In progress'
-						} else if (columnName == 'In progress') {
-							let response = await issues.ToWorking(issueUrl, labelsUrl, installationId);
-							console.log(response);
+							// Moved to column 'Triage'
+							if (columnName == 'Triage') {
+								let response = await issues.ToTriage(issueUrl, labelsUrl, installationId);
+								console.log(response);
 
-						// Moved to column 'Done'
-						} else if (columnName == 'Done') {
-							let response = await issues.ToDone(issueUrl, labelsUrl, installationId);
-							console.log(response);
+							// Moved to column 'In progress'
+							} else if (columnName == 'In progress') {
+								let response = await issues.ToWorking(issueUrl, labelsUrl, installationId);
+								console.log(response);
 
-						// Moved to a milestone column
-						} else {
-							let response = await issues.ToMilestone(columnName, milestonesUrl, issueUrl, labelsUrl, installationId);
-							console.log(response);
+							// Moved to column 'Done'
+							} else if (columnName == 'Done') {
+								let response = await issues.ToDone(issueUrl, labelsUrl, installationId);
+								console.log(response);
+
+							// Moved to a milestone column
+							} else {
+								let response = await issues.ToMilestone(columnName, milestonesUrl, issueUrl, labelsUrl, installationId);
+								console.log(response);
+							}
 						}
 					}
 
-				// Handle pull request events
+				// Handle push events
 				} else if (req.headers['x-github-event'] == 'push') {
-					const keywords = ['closed', 'closes', 'close', 'fixed', 'fixes', 'fix', 'resolved', 'resolves', 'resolve'];
-					let issueUrl = body['repository']['issues_url'].replace('{/number}', '');
 					let commits = body['commits'];
+					let issueUrl = body['repository']['issues_url'].replace('{/number}', '');
+					var issueNumbers = await commits.GetIssueNumbersFromCommits(commits);
 
-					// Loop through every commit in this push
-					for (var i = 0; i < commits.length; i++) {
-						let commitMessage = commits[i]['message'].toLowerCase();
-						let keywordIndexes = [];
+					// Add label 'Awaiting Pull Request' to issues
+					for (var i = 0; i < issueNumbers.length; i++) {
+						logSection(`ADDING LABEL "AWAITING PULL REQUEST" TO ISSUE #${issueNumbers[i]}`);
+						let response = await issues.AssignLabelsToIssue(['Awaiting Pull Request'], issueUrl + `/${issueNumbers[i]}`, installationId);
+						console.log(response);
+					}
 
-						// Loop through all the known keywords
-						for (var j = 0; j < keywords.length; j++) {
-							let keywordIndex = commitMessage.indexOf(keywords[j]);
+				// Handle pull request events
+				} else if (req.headers['x-github-event'] == 'pull_requests') {
 
-							// Found keyword
-							while (keywordIndex !== -1) {
+					// New pull request created
+					if (body['action'] == 'opened') {
+						let prUrl = body['pull_request']['url'];
+						let prBody = body['pull_request']['body'];
+						let commitsUrl = body['pull_request']['commits_url'];
 
-								// Just add if array is empty
-								if (keywordIndexes.length == 0) {
-									keywordIndexes.push(keywordIndex);
-								} else {
-									for (var k = 0; k < keywordIndexes.length; k++) {
+						// Get all the commits from this pr
+						let prCommits = await commits.GetCommits(commitsUrl, installationId);
 
-										// Only add if not already added (could happen)
-										if (keywordIndexes[k] == keywordIndex) {
-											break;
-										} else if (k == keywordIndexes.length - 1) {
-											keywordIndexes.push(keywordIndex);
-										}
+						// Get all the issue numbers from this pr
+						let issueNumbers = await commits.GetIssueNumbersFromCommits(prCommits, installationId);
+
+						// issues found
+						if (issueNumbers) {
+							prBody += '\n\n======  START OF CREEPER-BOT AUTOMATION  ======\n';
+							prBody += 'This PR will';
+
+							if (issueNumbers.length == 1) {
+								prBody += ` close #${issueNumbers[i]}.`;
+							} else {
+
+								// Loop through all issues numbers in this pr
+								for (var i = 0; i < issueNumbers.length; i++) {
+									if (i == issueNumbers.length - 1) {
+										prBody = prBody.slice(0, -1);
+										prBody += ` and will close #${issueNumbers[i]}.`;
+									} else {
+										prBody += ` close #${issueNumbers[i]},`;
 									}
 								}
-
-								// Keep looking through the commit comment for the same keyword
-								keywordIndex = commitMessage.indexOf(keywords[j], keywordIndex + keywords[j].length);
 							}
-						}
 
-						keywordIndexes.sort(function (a, b) {
-							return a - b;
-						});
+							prBody += '\n======  END OF CREEPER-BOT AUTOMATION  ======';
 
-						for (var j = 0; j < keywordIndexes.length; j++) {
-
-							// Keyword is present in commit message
-							let message = commitMessage.substring(keywordIndexes[j]);
-							let issue = message.match(/#[1-9][0-9]*/g);
-							let issueNumber = issue[0].substring(1);
-
-							// Add label 'Awaiting Pull Request' to issues with keywords
-							logSection(`ADDING LABEL "AWAITING PULL REQUEST" TO ISSUE #${issueNumber}`);
-							let response = await issues.AssignLabelsToIssue(['Awaiting Pull Request'], issueUrl + `/${issueNumber}`, installationId);
+							// Updates the pr body to close found issues
+							let response = await httpClient.Patch(prUrl, installationId, {
+								body: prBody
+							});
 							console.log(response);
 						}
 					}
