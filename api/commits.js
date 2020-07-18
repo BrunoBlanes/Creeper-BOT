@@ -14,7 +14,7 @@ module.exports = {
 
 		// Loop through every commit in this push
 		for (var i = 0; i < commits.length; i++) {
-			let commitMessage = commits[i]['message'].toLowerCase();
+			let commitMessage = commits[i]['commit']['message'].toLowerCase();
 			let keywordIndexes = [];
 
 			// Loop through all the known keywords
@@ -44,7 +44,7 @@ module.exports = {
 				let message = commitMessage.substring(keywordIndexes[j]);
 
 				// Regex match the issue number
-				let issue = message.match(/#[1-9][0-9]*/g);
+				let issue = message.match(/#[1-9][0-9]*/);
 				let issueNumber = issue[0].substring(1);
 
 				// Add keyword index to array

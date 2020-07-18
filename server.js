@@ -98,13 +98,13 @@ http.createServer(function (req, res) {
 							let columnName = '';
 
 							try {
+								// Try get the column name by the label
 								columnName = getColumnName(body['issue']);
+								var projectName = getAssignedProject(body['issue']['labels']);
+								await cards.MoveCardToColumn(columnName, 'Done', projectName, issueUrl, reposUrl, installationId);
 							} catch (err) {
 								console.log(err);
 							}
-
-							var projectName = getAssignedProject(body['issue']['labels']);
-							await cards.MoveCardToColumn(columnName, 'Done', projectName, issueUrl, reposUrl, installationId);
 						}
 
 					// Handle issue being closed
@@ -155,9 +155,9 @@ http.createServer(function (req, res) {
 
 				// Handle push events
 				} else if (req.headers['x-github-event'] == 'push') {
-					let commits = body['commits'];
+					let pushCommits = body['commits'];
 					let issueUrl = body['repository']['issues_url'].replace('{/number}', '');
-					var issueNumbers = await commits.GetIssueNumbersFromCommits(commits);
+					var issueNumbers = await commits.GetIssueNumbersFromCommits(pushCommits);
 
 					// Add label 'Awaiting Pull Request' to issues
 					for (var i = 0; i < issueNumbers.length; i++) {
@@ -167,7 +167,7 @@ http.createServer(function (req, res) {
 					}
 
 				// Handle pull request events
-				} else if (req.headers['x-github-event'] == 'pull_requests') {
+				} else if (req.headers['x-github-event'] == 'pull_request') {
 
 					// New pull request created
 					if (body['action'] == 'opened') {
@@ -176,6 +176,7 @@ http.createServer(function (req, res) {
 						let commitsUrl = body['pull_request']['commits_url'];
 
 						// Get all the commits from this pr
+						logSection('LINKING ISSUES TO PULL REQUEST');
 						let prCommits = await commits.GetCommits(commitsUrl, installationId);
 
 						// Get all the issue numbers from this pr
@@ -183,8 +184,7 @@ http.createServer(function (req, res) {
 
 						// issues found
 						if (issueNumbers) {
-							prBody += '\n\n======  START OF CREEPER-BOT AUTOMATION  ======\n';
-							prBody += 'This PR will';
+							prBody += '\n\n\nCreeper-bot: This PR will';
 
 							if (issueNumbers.length == 1) {
 								prBody += ` close #${issueNumbers[i]}.`;
@@ -200,8 +200,6 @@ http.createServer(function (req, res) {
 									}
 								}
 							}
-
-							prBody += '\n======  END OF CREEPER-BOT AUTOMATION  ======';
 
 							// Updates the pr body to close found issues
 							let response = await httpClient.Patch(prUrl, installationId, {
