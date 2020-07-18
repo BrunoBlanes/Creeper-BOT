@@ -32,6 +32,9 @@ AZURE_TENANT_ID=33d6dc3d-32f7-4da6-803f-134b326a4c73</Environment>
   </PropertyGroup>
   <ItemGroup>
     <None Include="Creeper-Bot - Web Deploy.pubxml" />
+    <Content Include="api\commits.js">
+      <SubType>Code</SubType>
+    </Content>
     <Content Include="api\projects.js">
       <SubType>Code</SubType>
     </Content>
