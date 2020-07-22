@@ -14,7 +14,7 @@ module.exports = {
 
 		// Loop through every commit in this push
 		for (var i = 0; i < commits.length; i++) {
-			let commitMessage = commits[i]['commit']['message'].toLowerCase();
+			let commitMessage = commits[i]['message'].toLowerCase();
 			let keywordIndexes = [];
 
 			// Loop through all the known keywords

@@ -4,7 +4,7 @@ module.exports = {
 	// Updates an issue who's project card was moved back to 'Triage'
 	ToTriage: async function (issueUrl, labelsUrl, installationId) {
 		try {
-			let labels = await spliceLabels(['Working', 'Done', 'Fixed'], ['Triage'], issueUrl, labelsUrl, installationId);
+			let labels = await spliceLabels(['Working', 'Complete', 'Fixed'], ['Triage'], issueUrl, labelsUrl, installationId);
 			let body = await updateIssue(issueUrl, null, labels, installationId);
 			return body;
 		} catch (err) {
@@ -15,7 +15,7 @@ module.exports = {
 	// Updates an issue who's project card was moved back to 'In progress'
 	ToWorking: async function (issueUrl, labelsUrl, installationId) {
 		try {
-			let labels = await spliceLabels(['Triage', 'Done', 'Fixed'], ['Working'], issueUrl, labelsUrl, installationId);
+			let labels = await spliceLabels(['Triage', 'Fixed', 'Complete'], ['Working'], issueUrl, labelsUrl, installationId);
 			let body = updateIssue(issueUrl, 0, labels, installationId);
 			return body;
 		} catch(err) {
@@ -24,36 +24,22 @@ module.exports = {
 	},
 
 	// Updates an issue who's project card was moved to 'Done'
-	ToDone: async function (issueUrl, labelsUrl, installationId) {
+	ToDone: async function (issueUrl, installationId) {
 		try {
-			let labels = await spliceLabels(['Triage', 'Working'], null, issueUrl, labelsUrl, installationId);
-			for (var i = 0; i < labels.length; i++) {
-				// Adds 'Fixed' if 'Bug' label is present
-				if (labels[i]['name'] == 'Bug') {
-					labels = await addLabels(['Fixed'], 0, labelsUrl, installationId, labels);
-					let body = updateIssue(issueUrl, 0, labels, installationId);
-					return body;
-					break;
-				}
-
-				// Adds 'Complete' if 'Task' is present
-				if (labels[i]['name'] == 'Task') {
-					labels = await addLabels(['Complete'], 0, labelsUrl, installationId, labels);
-					let body = await updateIssue(issueUrl, 0, labels, installationId);
-					return body;
-					break;
-				}
-			}
+			let labels = await removeLabels(['Triage', 'Working'], issueUrl, installationId);
+			let body = updateIssue(issueUrl, 0, labels, installationId);
+			return body;
+			break;
 		} catch(err) {
 			return err;
 		}
 	},
 
 	//Updates an issue who's project card was moved to a milestone column
-	ToMilestone: async function (columnName, milestonesUrl, issueUrl, labelsUrl, installationId) {
+	ToMilestone: async function (columnName, milestonesUrl, issueUrl, installationId) {
 		try {
 			let milestoneNumber = await getMilestoneNumber(columnName, milestonesUrl, installationId);
-			let labels = await spliceLabels(['Triage', 'Done', 'Fixed', 'Working'], null, issueUrl, labelsUrl, installationId);
+			let labels = await removeLabels(['Triage', 'Complete', 'Fixed', 'Working'], issueUrl, installationId);
 			let body = await updateIssue(issueUrl, milestoneNumber, labels, installationId);
 			return body;
 		} catch (err) {
@@ -61,10 +47,21 @@ module.exports = {
 		}
 	},
 
-	// Add labelS to the issue
+	// Add labels to the issue
 	AssignLabelsToIssue: async function (labels, issueUrl, installationId) {
 		try {
 			let body = await httpClient.Post(issueUrl + '/labels', installationId, labels);
+			return body;
+		} catch (err) {
+			return err;
+		}
+	},
+
+	// Updates the labels of an issue
+	UpdateLabels: async function (addLabels, removeLabels, issueUrl, labelsUrl, installationId) {
+		try {
+			labels = await spliceLabels(removeLabels, addLabels, issueUrl, labelsUrl, installationId);
+			let body = await updateIssue(issueUrl, 0, labels, installationId);
 			return body;
 		} catch (err) {
 			return err;
@@ -83,17 +80,6 @@ module.exports = {
 			} else {
 				throw new Error(`Cannot assign user ${user} to issue at ${issueUrl}`);
 			}
-		} catch (err) {
-			return err;
-		}
-	},
-
-	// Removes a set of labels from an issue
-	RemoveLabel: async function (removeLabels, issueUrl, installationId) {
-		try {
-			labels = await removeLabels(removeLabels, issueUrl, installationId);
-			let body = await updateIssue(issueUrl, 0, labels, installationId);
-			return body;
 		} catch (err) {
 			return err;
 		}
