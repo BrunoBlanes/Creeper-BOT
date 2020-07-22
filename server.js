@@ -36,6 +36,7 @@ http.createServer(function (req, res) {
 
 				// Handle events related to issues
 				if (req.headers['x-github-event'] == 'issues') {
+					let labelsUrl = body['repository']['labels_url'].replace('{/name}', '');
 					let reposUrl = body['issue']['repository_url'];
 					let labels = body['issue']['labels'];
 					let issueUrl = body['issue']['url'];
@@ -46,7 +47,22 @@ http.createServer(function (req, res) {
 
 						// Assigns label 'Triage' to issue
 						logSection('ASSIGN LABEL "TRIAGE" TO NEW ISSUE');
-						let response = await issues.AssignLabelsToIssue(['Triage'], issueUrl, installationId);
+						let response;
+
+						// Look for label 'Bug'
+						for (var i = 0; i < labels.length; i++) {
+							if (labels[i]['name'] == 'Bug') {
+
+								// If it is a bug just add if to triage
+								response = await issues.AssignLabelsToIssue(['Triage'], issueUrl, installationId);
+								break;
+							} else if (i == labels.length - 1) {
+
+								// If not a bug add it as a task for triage
+								response = await issues.AssignLabelsToIssue(['Task', 'Triage'], issueUrl, installationId);
+							}
+						}
+
 						console.log(response);
 
 						// Assigns myself to this issue
@@ -109,7 +125,21 @@ http.createServer(function (req, res) {
 
 					// Handle issue being closed
 					} else if (body['action'] == 'closed') {
-						response = await issues.RemoveLabel(['Awaiting Pull Request', issueUrl, installationId]);
+						let response;
+
+						for (var i = 0; i < labels.length; i++) {
+							if (labels[i]['name'] == 'Bug') {
+
+								// Adds 'Fixed' label if this was a bug
+								response = await issues.UpdateLabels(['Fixed'], ['Awaiting Pull Request'], issueUrl, labelsUrl, installationId);
+								break;
+							} else if (i == labels.length - 1) {
+
+								// Adds the 'Complete' label otherwise
+								response = await issues.UpdateLabels(['Complete'], ['Awaiting Pull Request'], issueUrl, labelsUrl, installationId);
+							}
+						}
+
 						console.log(response);
 					}
 
@@ -142,12 +172,12 @@ http.createServer(function (req, res) {
 
 							// Moved to column 'Done'
 							} else if (columnName == 'Done') {
-								let response = await issues.ToDone(issueUrl, labelsUrl, installationId);
+								let response = await issues.ToDone(issueUrl, installationId);
 								console.log(response);
 
 							// Moved to a milestone column
 							} else {
-								let response = await issues.ToMilestone(columnName, milestonesUrl, issueUrl, labelsUrl, installationId);
+								let response = await issues.ToMilestone(columnName, milestonesUrl, issueUrl, installationId);
 								console.log(response);
 							}
 						}
@@ -157,12 +187,13 @@ http.createServer(function (req, res) {
 				} else if (req.headers['x-github-event'] == 'push') {
 					let pushCommits = body['commits'];
 					let issueUrl = body['repository']['issues_url'].replace('{/number}', '');
+					let labelsUrl = body['repository']['labels_url'].replace('{/name}', '');
 					var issueNumbers = await commits.GetIssueNumbersFromCommits(pushCommits);
 
 					// Add label 'Awaiting Pull Request' to issues
 					for (var i = 0; i < issueNumbers.length; i++) {
 						logSection(`ADDING LABEL "AWAITING PULL REQUEST" TO ISSUE #${issueNumbers[i]}`);
-						let response = await issues.AssignLabelsToIssue(['Awaiting Pull Request'], issueUrl + `/${issueNumbers[i]}`, installationId);
+						let response = await issues.UpdateLabels(['Awaiting Pull Request'], ['Working'], issueUrl + `/${issueNumbers[i]}`, labelsUrl, installationId);
 						console.log(response);
 					}
 
