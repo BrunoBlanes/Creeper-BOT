@@ -45,10 +45,13 @@ module.exports = {
 
 				// Regex match the issue number
 				let issue = message.match(/#[1-9][0-9]*/);
-				let issueNumber = issue[0].substring(1);
 
-				// Add keyword index to array
-				pushToArray(issueNumber, issueNumbers);
+				if (issue) {
+					let issueNumber = issue[0].substring(1);
+
+					// Add keyword index to array
+					pushToArray(issueNumber, issueNumbers);
+				}
 			}
 		}
 
