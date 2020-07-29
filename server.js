@@ -7,6 +7,7 @@ var projects = require('./api/projects');
 var commits = require('./api/commits');
 var issues = require('./api/issues');
 var cards = require('./api/cards');
+const pullrequest = require('./api/pullrequest');
 
 var port = process.env.PORT || 1337;
 
@@ -211,11 +212,11 @@ http.createServer(function (req, res) {
 						let prCommits = await commits.GetCommits(commitsUrl, installationId);
 
 						// Get all the issue numbers from this pr
-						let issueNumbers = await commits.GetIssueNumbersFromCommits(prCommits, installationId);
+						let issueNumbers = await pullrequest.GetIssueNumbersFromPRCommits(prCommits, installationId);
 
 						// issues found
 						if (issueNumbers) {
-							prBody += '\n\n\nCreeper-bot: This PR will';
+							prBody += '\n\n\n\n**Creeper-bot:** This PR will';
 
 							if (issueNumbers.length == 1) {
 								prBody += ` close #${issueNumbers[i]}.`;
@@ -249,7 +250,7 @@ http.createServer(function (req, res) {
 		res.write('<p>Creeper-Bot is a bot created by Bruno Blanes to automate his personal GitHub account.<p>You can find more about him at <a href="https://github.com/BrunoBlanes/Creeper-Bot/">https://github.com/BrunoBlanes/Creeper-Bot/</a>', 'text/html; charset=utf-8');
 		res.end();
 	}
-}).listen(port);
+}).listen(5001);
 
 // Adds a cool section divider to the log
 function logSection(title) {
