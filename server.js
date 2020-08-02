@@ -200,38 +200,41 @@ http.createServer(function (req, res) {
 
 				// Handle pull request events
 				} else if (req.headers['x-github-event'] == 'pull_request') {
+					let prUrl = body['pull_request']['url'];
+					let prBody = body['pull_request']['body'];
+					let commitsUrl = body['pull_request']['commits_url'];
+					let prCommits = await commits.GetCommits(commitsUrl, installationId);
+
+					// Get all the issue numbers from this pr
+					let prIssues = await pullrequest.GetIssueNumbersFromPRCommits(prCommits, installationId);
 
 					// New pull request created
 					if (body['action'] == 'opened') {
-						let prUrl = body['pull_request']['url'];
-						let prBody = body['pull_request']['body'];
-						let commitsUrl = body['pull_request']['commits_url'];
 
 						// Get all the commits from this pr
 						logSection('LINKING ISSUES TO PULL REQUEST');
-						let prCommits = await commits.GetCommits(commitsUrl, installationId);
-
-						// Get all the issue numbers from this pr
-						let issueNumbers = await pullrequest.GetIssueNumbersFromPRCommits(prCommits, installationId);
 
 						// issues found
-						if (issueNumbers) {
-							prBody += '\n\n\n\n**Creeper-bot:** This PR will';
+						if (prIssues) {
+							prBody = generateBody(prBody, prIssues);
 
-							if (issueNumbers.length == 1) {
-								prBody += ` close #${issueNumbers[i]}.`;
-							} else {
+							// Updates the pr body to close found issues
+							let response = await httpClient.Patch(prUrl, installationId, {
+								body: prBody
+							});
+							console.log(response);
+						}
 
-								// Loop through all issues numbers in this pr
-								for (var i = 0; i < issueNumbers.length; i++) {
-									if (i == issueNumbers.length - 1) {
-										prBody = prBody.slice(0, -1);
-										prBody += ` and will close #${issueNumbers[i]}.`;
-									} else {
-										prBody += ` close #${issueNumbers[i]},`;
-									}
-								}
-							}
+					// Open pull request updated
+					} else if (body['action'] == 'synchronize') {
+
+						// Get all the commits from this pr
+						logSection('LINKING ISSUES TO EXISTING PULL REQUEST');
+						prBody = prBody.substring(0, prBody.indexOf('Creeper-bot:') - 1);
+
+						// issues found
+						if (prIssues) {
+							prBody = generateBody(prBody, prIssues);
 
 							// Updates the pr body to close found issues
 							let response = await httpClient.Patch(prUrl, installationId, {
@@ -299,4 +302,24 @@ function getColumnName(issue) {
 	} else {
 		throw new Error('Could not find the proper label indication a column name');
 	}
+}
+
+function generateBody(prBody, prIssues) {
+	prBody += '\n\n\n\n**Creeper-bot:** This PR will';
+	if (prIssues.length == 1) {
+		prBody += ` close #${prIssues[i]}.`;
+	} else {
+
+		// Loop through all issues numbers in this pr
+		for (var i = 0; i < prIssues.length; i++) {
+			if (i == prIssues.length - 1) {
+				prBody = prBody.slice(0, -1);
+				prBody += ` and will close #${prIssues[i]}.`;
+			} else {
+				prBody += ` close #${prIssues[i]},`;
+			}
+		}
+	}
+
+	return prBody;
 }
