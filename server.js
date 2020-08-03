@@ -2,12 +2,12 @@
 var http = require('http');
 
 var httpClient = require('./functions/httpClient');
+var pullrequest = require('./api/pullrequest');
 var githook = require('./functions/githook');
 var projects = require('./api/projects');
 var commits = require('./api/commits');
 var issues = require('./api/issues');
 var cards = require('./api/cards');
-const pullrequest = require('./api/pullrequest');
 
 var port = process.env.PORT || 1337;
 
@@ -242,6 +242,13 @@ http.createServer(function (req, res) {
 							});
 							console.log(response);
 						}
+					}
+
+				// Handle workflow events
+				} else if (req.headers['x-github-event'] == 'workflow_run') {
+
+					// Workflow completed
+					if (body['action'] == 'completed') {
 					}
 				}
 			}
