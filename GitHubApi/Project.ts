@@ -1,8 +1,12 @@
 import { HttpClient } from '../Services';
 
 export class Project {
-
-	// Get project id by project name
+	/**
+	 * Get the specified project's id number.
+	 * @param name Project name.
+	 * @param reposUrl Repository url to look for the specified project.
+	 * @param installationId Creeper-Bot installation id.
+	 */
 	public static async GetIdAsync(name: string, reposUrl: string, installationId: string): Promise<number> {
 		let projects: Array<any> = await HttpClient.GetAsync(`${reposUrl}/projects`, installationId);
 
@@ -69,12 +73,4 @@ export class Card {
 			position: 'top'
 		}, installationId);
 	}
-}
-
-export enum Projects {
-	iOS = 8474386,
-	Server = 8474435,
-	Android = 8474424,
-	Windows = 8474428,
-	WebAssembly = 8474431
 }

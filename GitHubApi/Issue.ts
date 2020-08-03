@@ -1,4 +1,59 @@
-var httpClient = require(__dirname + '/../functions/httpClient');
+import { HttpClient } from '../Services';
+
+export class Issue {
+
+	// Returns a list of labels from an issue
+	public static async GetLabelsAsync(issueUrl: string, installationId: string): Promise<Array<any>> {
+		let body = await HttpClient.GetAsync(issueUrl, installationId);
+		return body['labels'];
+	}
+
+	// Add labels to the issue
+	public static async AddLabelAsync(labels: Array<string>, issueUrl: string, installationId: string): Promise<void> {
+		await HttpClient.PostAsync(issueUrl + '/labels', labels, installationId);
+	}
+
+	// Removes labels from an issue
+	public static async RemoveLabelsAsync(labels: Array<string>, issueUrl: string, installationId: string): Promise<void> {
+		let issueLabels = await this.GetLabelsAsync(issueUrl, installationId);
+		issueLabels.forEach(function (label) {
+			for (let i = 0; i < labels.length; i++) {
+				if (label['name'] == labels[i]) {
+					labels.splice(i, 1);
+					break;
+				}
+			}
+		});
+	}
+
+	// Assign user to an issue
+	public static async AssignUserAsync(user: string, reposUrl: string, issueUrl: string, installationId: string): Promise<any> {
+		let response = await HttpClient.GetAsync(reposUrl + `/assignees/${user}`, installationId);
+
+		// Can assign myself to the issue
+		if (!response) {
+			return await HttpClient.PostAsync(issueUrl + '/assignees', { 'assignees': [user] }, installationId);
+		} else {
+			throw new Error(`Cannot assign user ${user} to issue at ${issueUrl}`);
+		}
+	}
+
+	// Updates an issue's label list and milestone
+	private static async UpdateAsync(issueUrl: string, labels: any, milestoneNumber: number, installationId: string): Promise<void> {
+		if (milestoneNumber == -1) {
+			await HttpClient.PatchAsync(issueUrl, { 'labels': labels }, installationId);
+		} else {
+			await HttpClient.PatchAsync(issueUrl, {
+				'milestone': milestoneNumber,
+				'labels': labels
+			}, installationId);
+		}
+	}
+}
+
+export class Label {
+
+}
 
 module.exports = {
 	// Updates an issue who's project card was moved back to 'Triage'
@@ -46,16 +101,6 @@ module.exports = {
 		}
 	},
 
-	// Add labels to the issue
-	AssignLabelsToIssue: async function (labels, issueUrl, installationId) {
-		try {
-			let body = await httpClient.Post(issueUrl + '/labels', installationId, labels);
-			return body;
-		} catch (err) {
-			return err;
-		}
-	},
-
 	// Updates the labels of an issue
 	UpdateLabels: async function (addLabels, removeLabels, issueUrl, labelsUrl, installationId) {
 		try {
@@ -65,32 +110,8 @@ module.exports = {
 		} catch (err) {
 			return err;
 		}
-	},
-
-	// Assign user to an issue
-	AssignUserToIssue: async function (user, reposUrl, issueUrl, installationId) {
-		try {
-			let response = await httpClient.Get(reposUrl + `/assignees/${user}`, installationId);
-
-			// Checks if I can assign myself to the issue
-			if (!response) {
-				let body = await httpClient.Post(issueUrl + '/assignees', installationId, { 'assignees': [user] });
-				return body;
-			} else {
-				throw new Error(`Cannot assign user ${user} to issue at ${issueUrl}`);
-			}
-		} catch (err) {
-			return err;
-		}
-	},
+	}
 };
-
-// Returns a list of labels from an issue
-async function getIssueLabels(issueUrl, installationId) {
-	let body = await httpClient.Get(issueUrl, installationId);
-	body = JSON.parse(body);
-	return body['labels'];
-}
 
 // Returns a list of labels with removals and/or aditions
 async function spliceLabels(remove, add, issueUrl, labelsUrl, installationId) {
@@ -106,21 +127,6 @@ async function spliceLabels(remove, add, issueUrl, labelsUrl, installationId) {
 async function getLabel(labelsUrl, label, installationId) {
 	let body = await httpClient.Get(labelsUrl + `/${label}`, installationId);
 	return body;
-}
-
-// Removes labels from an issue
-async function removeLabels(removeLabels, issueUrl, installationId) {
-	let labels = await getIssueLabels(issueUrl, installationId);
-	for (var i = 0; i < labels.length; i++) {
-		for (var j = 0; j < removeLabels.length; j++) {
-			if (labels[i]['name'] == removeLabels[j]) {
-				labels.splice(i, 1);
-				break;
-			}
-		}
-	}
-
-	return labels;
 }
 
 // Add labels from an issue
@@ -143,20 +149,6 @@ async function addLabels(addLabels, issueUrl, labelsUrl, installationId, labels 
 		return labels;
 	} else {
 		throw new Error('At: issues.addLabels: parameters "issueUrl" and "labels" cannot both be null');
-	}
-}
-
-// Updates an issue's label list and milestone
-async function updateIssue(issueUrl, milestoneNumber, labels, installationId) {
-	if (milestoneNumber == 0) {
-		let body = await httpClient.Patch(issueUrl, installationId, { 'labels': labels });
-		return body;
-	} else {
-		let body = await httpClient.Patch(issueUrl, installationId, {
-			'milestone': milestoneNumber,
-			'labels': labels
-		});
-		return body;
 	}
 }
 
