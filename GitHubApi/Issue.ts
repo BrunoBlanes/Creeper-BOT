@@ -18,7 +18,7 @@ module.exports = {
 			let labels = await spliceLabels(['Triage', 'Fixed', 'Complete'], ['Working'], issueUrl, labelsUrl, installationId);
 			let body = updateIssue(issueUrl, 0, labels, installationId);
 			return body;
-		} catch(err) {
+		} catch (err) {
 			return err;
 		}
 	},
@@ -29,8 +29,7 @@ module.exports = {
 			let labels = await removeLabels(['Triage', 'Working'], issueUrl, installationId);
 			let body = updateIssue(issueUrl, 0, labels, installationId);
 			return body;
-			break;
-		} catch(err) {
+		} catch (err) {
 			return err;
 		}
 	},
@@ -60,7 +59,7 @@ module.exports = {
 	// Updates the labels of an issue
 	UpdateLabels: async function (addLabels, removeLabels, issueUrl, labelsUrl, installationId) {
 		try {
-			labels = await spliceLabels(removeLabels, addLabels, issueUrl, labelsUrl, installationId);
+			let labels = await spliceLabels(removeLabels, addLabels, issueUrl, labelsUrl, installationId);
 			let body = await updateIssue(issueUrl, 0, labels, installationId);
 			return body;
 		} catch (err) {
@@ -135,7 +134,7 @@ async function addLabels(addLabels, issueUrl, labelsUrl, installationId, labels 
 		}
 		return labels;
 
-	// Adds to an existing list
+		// Adds to an existing list
 	} else if (labels) {
 		for (var i = 0; i < addLabels.length; i++) {
 			let label = await getLabel(labelsUrl, addLabels[i], installationId);

@@ -35,10 +35,11 @@ AZURE_TENANT_ID=33d6dc3d-32f7-4da6-803f-134b326a4c73</Environment>
   </PropertyGroup>
   <ItemGroup>
     <None Include="Creeper-Bot - Web Deploy.pubxml" />
-    <Content Include="functions\GitHubApi.ts" />
-    <Content Include="api\pullrequest.ts" />
-    <Content Include="api\Card.ts" />
-    <Content Include="api\issues.ts" />
+    <Content Include="GitHubApi\Commit.ts" />
+    <Content Include="GitHubApi\PullRequest.ts" />
+    <Content Include="Services.ts" />
+    <Content Include="GitHubApi\Project.ts" />
+    <Content Include="GitHubApi\Issue.ts" />
     <Content Include="tsconfig.json">
       <SubType>Code</SubType>
     </Content>
@@ -48,8 +49,7 @@ AZURE_TENANT_ID=33d6dc3d-32f7-4da6-803f-134b326a4c73</Environment>
     <Content Include="README.md" />
   </ItemGroup>
   <ItemGroup>
-    <Folder Include="functions\" />
-    <Folder Include="api\" />
+    <Folder Include="GitHubApi\" />
   </ItemGroup>
   <ItemGroup>
     <TypeScriptCompile Include="server.ts">

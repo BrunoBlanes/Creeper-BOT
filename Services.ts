@@ -8,7 +8,7 @@ const credential = new DefaultAzureCredential();
 const httpClient = Axios.create({ baseURL: 'https://api.github.com', timeout: 1000 });
 const client = new SecretClient('https://Creeper-Bot-KeyVault.vault.azure.net', credential);
 
-export default class {
+export class HttpClient {
 
 	// Makes a GET request to GitHub
 	public static async GetAsync(path: string, installationId: string): Promise<any> {
@@ -16,7 +16,7 @@ export default class {
 		let response = await httpClient.get(path, config).catch(err => { this.AxiosErrorHandler(err); });
 		console.log(`GET: ${path}`);
 		console.log(`Status code: ${response['status']}\n`);
-		return response['data'];
+		return JSON.parse(response['data']);
 	}
 
 	// Makes a POST request to GitHub
@@ -25,7 +25,7 @@ export default class {
 		let response = await httpClient.post(path, data, config).catch(err => { this.AxiosErrorHandler(err); });
 		console.log(`POST: ${path}`);
 		console.log(`Status code: ${response['status']}\n`);
-		return response['data'];
+		return JSON.parse(response['data']);
 	}
 
 	// Makes a PATCH request to GitHub
@@ -38,21 +38,7 @@ export default class {
 		let response = await httpClient(path, config).catch(err => { this.AxiosErrorHandler(err); });
 		console.log(`PATCH: ${path}`);
 		console.log(`Status code: ${response['status']}\n`);
-		return response['data'];
-	}
-
-	// Validades signed webhooks from GitHub
-	public static async ValidateSecretAsync(payload: string, sig: string): Promise<boolean> {
-		let secret: KeyVaultSecret = await client.getSecret("GitHub-Secret");
-		if (payload) {
-			let secretValue: string = secret['value'];
-			const hmac: Crypto.Hmac = Crypto.createHmac('sha1', secretValue);
-			const digest: Buffer = Buffer.from('sha1=' + hmac.update(payload).digest('hex'), 'utf8');
-			const checksum: Buffer = Buffer.from(sig, 'utf8');
-			if (checksum.length !== digest.length || !Crypto.timingSafeEqual(digest, checksum))
-				return false;
-			return true;
-		}
+		return JSON.parse(response['data']);
 	}
 
 	// Set headers for the GitHub Api
@@ -94,5 +80,22 @@ export default class {
 	// Handles Axios HTTP errors
 	private static AxiosErrorHandler(err: AxiosError): void {
 		throw new Error(`${err.config.url}`);
+	}
+}
+
+export class Validator {
+
+	// Validades signed webhooks from GitHub
+	public static async ValidateSecretAsync(payload: string, sig: string): Promise<boolean> {
+		let secret: KeyVaultSecret = await client.getSecret("GitHub-Secret");
+		if (payload) {
+			let secretValue: string = secret['value'];
+			const hmac: Crypto.Hmac = Crypto.createHmac('sha1', secretValue);
+			const digest: Buffer = Buffer.from('sha1=' + hmac.update(payload).digest('hex'), 'utf8');
+			const checksum: Buffer = Buffer.from(sig, 'utf8');
+			if (checksum.length !== digest.length || !Crypto.timingSafeEqual(digest, checksum))
+				return false;
+			return true;
+		}
 	}
 }
