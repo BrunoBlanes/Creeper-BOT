@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="4.0">
   <PropertyGroup>
     <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">14.0</VisualStudioVersion>
@@ -22,6 +23,8 @@ AZURE_TENANT_ID=33d6dc3d-32f7-4da6-803f-134b326a4c73</Environment>
     <OutputPath>.</OutputPath>
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <ProjectTypeGuids>{3AF33F2E-1136-4D97-BBB7-1795711AC8B8};{349c5851-65df-11da-9384-00065b846f21};{9092AA53-FB77-4645-B42D-1CCCA6BD08BD}</ProjectTypeGuids>
+    <NodejsPort>1337</NodejsPort>
+    <EnableTypeScript>true</EnableTypeScript>
     <StartWebBrowser>True</StartWebBrowser>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
@@ -32,27 +35,14 @@ AZURE_TENANT_ID=33d6dc3d-32f7-4da6-803f-134b326a4c73</Environment>
   </PropertyGroup>
   <ItemGroup>
     <None Include="Creeper-Bot - Web Deploy.pubxml" />
-    <Content Include="api\pullrequest.js">
+    <Content Include="functions\GitHubApi.ts" />
+    <Content Include="api\pullrequest.ts" />
+    <Content Include="api\Card.ts" />
+    <Content Include="api\issues.ts" />
+    <Content Include="tsconfig.json">
       <SubType>Code</SubType>
     </Content>
-    <Content Include="Web.config">
-      <SubType>Code</SubType>
-    </Content>
-    <None Include="Web.Debug.config">
-      <SubType>Code</SubType>
-    </None>
-    <Content Include="api\cards.js">
-      <SubType>Code</SubType>
-    </Content>
-    <Content Include="functions\githook.js">
-      <SubType>Code</SubType>
-    </Content>
-    <Content Include="functions\httpClient.js">
-      <SubType>Code</SubType>
-    </Content>
-    <Content Include="api\issues.js">
-      <SubType>Code</SubType>
-    </Content>
+    <Content Include="Web.config" />
     <Content Include="server.js" />
     <Content Include="package.json" />
     <Content Include="README.md" />
@@ -60,6 +50,11 @@ AZURE_TENANT_ID=33d6dc3d-32f7-4da6-803f-134b326a4c73</Environment>
   <ItemGroup>
     <Folder Include="functions\" />
     <Folder Include="api\" />
+  </ItemGroup>
+  <ItemGroup>
+    <TypeScriptCompile Include="server.ts">
+      <SubType>Code</SubType>
+    </TypeScriptCompile>
   </ItemGroup>
   <Import Project="$(VSToolsPath)\Node.js Tools\Microsoft.NodejsToolsV2.targets" />
   <ProjectExtensions>
