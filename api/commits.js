@@ -1,12 +1,20 @@
+var httpClient = require(__dirname + '/../functions/httpClient');
+
 const keywords = ['closed', 'closes', 'close', 'fixed', 'fixes', 'fix', 'resolved', 'resolves', 'resolve'];
 
 module.exports = {
-	GetIssueNumbersFromPRCommits: async function (commits) {
+	// Returns an array of commits from the url
+	GetCommits: async function (commitsUrl, installationId) {
+		body = JSON.parse(await httpClient.Get(commitsUrl, installationId));
+		return body;
+	},
+
+	GetIssueNumbersFromCommits: async function (commits) {
 		let issueNumbers = [];
 
 		// Loop through every commit in this push
 		for (var i = 0; i < commits.length; i++) {
-			let commitMessage = commits[i]['commit']['message'].toLowerCase();
+			let commitMessage = commits[i]['message'].toLowerCase();
 			let keywordIndexes = [];
 
 			// Loop through all the known keywords
