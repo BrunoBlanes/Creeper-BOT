@@ -1,4 +1,5 @@
-import { Project, Column, Card, Projects } from './GitHubApi/Project';
+import Project from './GitHubApi/Projects';
+import Issue from './GitHubApi/Issues';
 import { Validator } from './Services';
 import http = require('http');
 

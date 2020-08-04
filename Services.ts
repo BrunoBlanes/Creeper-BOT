@@ -1,5 +1,5 @@
+import Axios, { AxiosRequestConfig, AxiosResponse, AxiosError } from 'axios';
 import { SecretClient, KeyVaultSecret } from '@azure/keyvault-secrets';
-import Axios, { AxiosRequestConfig, AxiosError } from 'axios';
 import { DefaultAzureCredential } from '@azure/identity';
 import * as JWT from 'jsonwebtoken';
 import * as Crypto from 'crypto';
@@ -11,20 +11,16 @@ const client = new SecretClient('https://Creeper-Bot-KeyVault.vault.azure.net', 
 export class HttpClient {
 
 	// Makes a GET request to GitHub
-	public static async GetAsync(path: string, installationId: string): Promise<any> {
+	public static async GetAsync<T>(path: string, installationId: string): Promise<T> {
 		const config: AxiosRequestConfig = { headers: await this.SetHeadersAsync(installationId) };
-		let response = await httpClient.get(path, config).catch(err => { this.AxiosErrorHandler(err); });
-		console.log(`GET: ${path}`);
-		console.log(`Status code: ${response['status']}\n`);
+		let response: AxiosResponse = await httpClient.get(path, config);
 		return JSON.parse(response['data']);
 	}
 
 	// Makes a POST request to GitHub
 	public static async PostAsync(path: string, data: any, installationId: string): Promise<any> {
 		const config: AxiosRequestConfig = { headers: await this.SetHeadersAsync(installationId) };
-		let response = await httpClient.post(path, data, config).catch(err => { this.AxiosErrorHandler(err); });
-		console.log(`POST: ${path}`);
-		console.log(`Status code: ${response['status']}\n`);
+		let response: AxiosResponse = await httpClient.post(path, data, config);
 		return JSON.parse(response['data']);
 	}
 
@@ -35,23 +31,45 @@ export class HttpClient {
 			method: 'PATCH',
 			headers: await this.SetHeadersAsync(installationId)
 		};
-		let response = await httpClient(path, config).catch(err => { this.AxiosErrorHandler(err); });
-		console.log(`PATCH: ${path}`);
-		console.log(`Status code: ${response['status']}\n`);
+		let response: AxiosResponse = await httpClient(path, config);
 		return JSON.parse(response['data']);
+	}
+
+	// Makes a PUT request to GitHub
+	public static async PutAsync(path: string, data: any, installationId: string): Promise<any> {
+		const config: AxiosRequestConfig = {
+			data: data,
+			method: 'PUT',
+			headers: await this.SetHeadersAsync(installationId)
+		};
+		let response: AxiosResponse = await httpClient(path, config);
+		return JSON.parse(response['data']);
+	}
+
+	// Makes a DELETE request to GitHub
+	public static async DeleteAsync(path: string, installationId: string): Promise<number> {
+		const config: AxiosRequestConfig = {
+			method: 'DELETE',
+			headers: await this.SetHeadersAsync(installationId)
+		};
+		let response: AxiosResponse = await httpClient(path, config);
+		return response.status;
 	}
 
 	// Set headers for the GitHub Api
 	private static async SetHeadersAsync(installationId: string) {
 		return {
 			'User-Agent': 'BrunoBlanes',
-			'Authorization': `token ${await this.AuthenticateAsync(installationId)}`,
+			'Authorization': `token ${await Authenticator.AuthenticateAsync(installationId)}`,
 			'Accept': 'application/vnd.github.inertia-preview+json'
 		};
 	}
+}
+
+class Authenticator {
 
 	// Gets an access token from the api
-	private static async AuthenticateAsync(installationId: string): Promise<string> {
+	public static async AuthenticateAsync(installationId: string): Promise<string> {
 		const path: string = `/app/installations/${installationId}/access_tokens`;
 		const config: AxiosRequestConfig = {
 			headers: {
@@ -69,17 +87,10 @@ export class HttpClient {
 	private static async GenerateJwtTokenAsync(): Promise<string> {
 		let secret: KeyVaultSecret = await client.getSecret("GitHub-PrivateKey");
 		let cert: Buffer = Buffer.from(secret['value']);
-		return JWT.sign({ iss: 72569 },
-			cert, {
-				algorithm: 'RS256',
-				expiresIn: '10m'
-			}
-		);
-	}
-
-	// Handles Axios HTTP errors
-	private static AxiosErrorHandler(err: AxiosError): void {
-		throw new Error(`${err.config.url}`);
+		return JWT.sign({ iss: 72569 }, cert, {
+			algorithm: 'RS256',
+			expiresIn: '10m'
+		});
 	}
 }
 
