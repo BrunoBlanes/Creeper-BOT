@@ -1,14 +1,72 @@
-var httpClient = require(__dirname + '/../functions/httpClient');
+import { HttpClient } from '../Services';
+import { User } from './User';
 
 const keywords = ['closed', 'closes', 'close', 'fixed', 'fixes', 'fix', 'resolved', 'resolves', 'resolve'];
 
-module.exports = {
-	// Returns an array of commits from the url
-	GetCommits: async function (commitsUrl, installationId) {
-		body = JSON.parse(await httpClient.Get(commitsUrl, installationId));
-		return body;
-	},
+export class Commit {
+	/**
+	 * List commits
+	 * https://docs.github.com/en/rest/reference/repos#list-commits
+	 * @param url
+	 * @param installationId
+	 */
+	public static async ListAsync(url: string, installationId: string): Promise<Array<Commit>> {
+		return await HttpClient.GetAsync<Array<Commit>>(url, installationId);
+	}
+}
 
+export interface Commit {
+	url: string;
+	sha: string;
+	node_id: string;
+	html_url: string;
+	comments_url: string;
+	commit: CommitData;
+	author: User;
+	committer: User;
+	parents: Parent[];
+}
+
+export interface Author {
+	name: string;
+	email: string;
+	date: Date;
+}
+
+export interface Committer {
+	name: string;
+	email: string;
+	date: Date;
+}
+
+export interface Tree {
+	url: string;
+	sha: string;
+}
+
+export interface Verification {
+	verified: boolean;
+	reason: string;
+	signature?: any;
+	payload?: any;
+}
+
+export interface CommitData {
+	url: string;
+	author: Author;
+	committer: Committer;
+	message: string;
+	tree: Tree;
+	comment_count: number;
+	verification: Verification;
+}
+
+export interface Parent {
+	url: string;
+	sha: string;
+}
+
+module.exports = {
 	GetIssueNumbersFromCommits: async function (commits) {
 		let issueNumbers = [];
 

@@ -330,3 +330,63 @@ function generateBody(prBody, prIssues) {
 
 	return prBody;
 }
+
+
+
+module.exports = {
+	// Updates an issue who's project card was moved back to 'Triage'
+	ToTriage: async function (issueUrl, labelsUrl, installationId) {
+		try {
+			let labels = await spliceLabels(['Working', 'Complete', 'Fixed'], ['Triage'], issueUrl, labelsUrl, installationId);
+			let body = await updateIssue(issueUrl, null, labels, installationId);
+			return body;
+		} catch (err) {
+			return err;
+		}
+	},
+
+	// Updates an issue who's project card was moved back to 'In progress'
+	ToWorking: async function (issueUrl, labelsUrl, installationId) {
+		try {
+			let labels = await spliceLabels(['Triage', 'Fixed', 'Complete'], ['Working'], issueUrl, labelsUrl, installationId);
+			let body = updateIssue(issueUrl, 0, labels, installationId);
+			return body;
+		} catch (err) {
+			return err;
+		}
+	},
+
+	// Updates an issue who's project card was moved to 'Done'
+	ToDone: async function (issueUrl, installationId) {
+		try {
+			let labels = await removeLabels(['Triage', 'Working'], issueUrl, installationId);
+			let body = updateIssue(issueUrl, 0, labels, installationId);
+			return body;
+		} catch (err) {
+			return err;
+		}
+	},
+
+	//Updates an issue who's project card was moved to a milestone column
+	ToMilestone: async function (columnName, milestonesUrl, issueUrl, installationId) {
+		try {
+			let milestoneNumber = await getMilestoneNumber(columnName, milestonesUrl, installationId);
+			let labels = await removeLabels(['Triage', 'Complete', 'Fixed', 'Working'], issueUrl, installationId);
+			let body = await updateIssue(issueUrl, milestoneNumber, labels, installationId);
+			return body;
+		} catch (err) {
+			return err;
+		}
+	},
+
+	// Updates the labels of an issue
+	UpdateLabels: async function (addLabels, removeLabels, issueUrl, labelsUrl, installationId) {
+		try {
+			let labels = await spliceLabels(removeLabels, addLabels, issueUrl, labelsUrl, installationId);
+			let body = await updateIssue(issueUrl, 0, labels, installationId);
+			return body;
+		} catch (err) {
+			return err;
+		}
+	}
+};

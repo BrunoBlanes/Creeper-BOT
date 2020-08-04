@@ -1,5 +1,5 @@
 import Project from './GitHubApi/Projects';
-import Issue from './GitHubApi/Issues';
+import Issue from './GitHubApi/Issue';
 import { Validator } from './Services';
 import http = require('http');
 
