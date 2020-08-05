@@ -1,7 +1,21 @@
-import { plainToClass } from 'class-transformer';
-import { HttpClient } from '../Services';
+import { createAppAuth } from '@octokit/auth-app';
 import { Card, Project } from './Project';
+import { Octokit } from '@octokit/core';
+import { Azure } from '../Services';
 import { User } from './User';
+
+const octokit = new Octokit({
+	authStrategy: createAppAuth,
+	auth: {
+		id: 72569,
+		privateKey: Azure.PrivateKey
+	},
+	previews: [
+		'machine-man',
+	],
+	userAgent: 'Creeper-Bot',
+	timeZone: 'America/Sao_Paulo'
+});
 
 export class Issue {
 	/**
@@ -11,22 +25,57 @@ export class Issue {
 	 * @param installationId
 	 */
 	public static async ListAsync(owner: string, repo: string): Promise<Array<Issue>> {
-		let response = await HttpClient.request(`GET /repos/:owner/:repo/issues`, {
+		let response = await octokit.request('GET /repos/:owner/:repo/issues', {
 			owner: owner,
 			repo: repo
 		});
 
-		return plainToClass(Issue, response.data);
+		if (response.status == 200) return response.data as unknown as Issue[];
+		throw new Error(`Could not retrieve list of issues for owner "${owner}" and repo "${repo}"`)
 	}
 
 	/**
 	 * Add assignees to an issue
 	 * https://docs.github.com/en/rest/reference/issues#add-assignees-to-an-issue
-	 * @param userNames
-	 * @param installationId
+	 * @param owner
+	 * @param repo
+	 * @param assignees Usernames of people to assign this issue to.
+	 * 
+	 * NOTE: Only users with push access can add assignees to an issue. Assignees are silently ignored otherwise.
 	*/
-	public async AssignUsersAsync(userNames: Array<string>, installationId: string): Promise<void> {
-		await HttpClient.PostAsync(`${this.url}/assignees`, { 'assignees': userNames }, installationId);
+	public async AssignUsersAsync(owner: string, repo: string, assignees: Array<string>): Promise<void> {
+		if (assignees.length > 10) throw new Error('Maximum assignees allowed is 10.');
+		else {
+			assignees.forEach(async function (assignee: string) {
+				let response = await octokit.request('GET /repos/:owner/:repo/assignees/:assignee', {
+					owner: owner,
+					repo: repo,
+					assignee: assignee
+				});
+
+				if (response.status == 404) {
+					assignees.splice(assignees.indexOf(assignee), 1);
+					console.warn(`User "${assignee}" does not have permission to be assigned to issue ${this.number} of owner "${owner}" and repo "${repo}".`);
+				}
+
+				else if (response.status != 204) {
+					assignees.splice(assignees.indexOf(assignee), 1);
+					console.error(`Could not check if user "${assignee}" has permission to be assigned to issue ${this.number} of owner "${owner}" and repo "${repo}".\n Octokit returned error ${response.status}.`);
+				}
+			});
+		}
+
+		if (assignees.length > 0) {
+			let response = await octokit.request('POST /repos/:owner/:repo/issues/:issue_number/assignees', {
+				owner: owner,
+				repo: repo,
+				issue_number: this.number,
+				assignees: assignees
+			});
+
+			if (response.status == 201) this.assignees = response.data.assignees;
+			else throw new Error(`Could not add assignees to issue ${this.number} of owner "${owner}" and repo "${repo}".\n Octokit returned error ${response.status}.`);
+		} else console.warn('Assignees list was empty, skipping adding assignees to the issue.');
 	}
 
 	/**
@@ -184,7 +233,7 @@ export interface Issue {
 	active_lock_reason: string;
 	comments: number;
 	pull_request: PullRequest;
-	closed_at?: any;
+	closed_at: Date;
 	created_at: Date;
 	updated_at: Date;
 }
