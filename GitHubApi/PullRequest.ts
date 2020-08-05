@@ -3,19 +3,7 @@ import { HttpClient } from '../Services';
 const keywords = ['closed', 'closes', 'close', 'fixed', 'fixes', 'fix', 'resolved', 'resolves', 'resolve'];
 
 export class PullRequest {
-	/**
-	 * Create a project card
-	 * https://docs.github.com/en/rest/reference/projects#create-a-project-card
-	 * @param issueId
-	 * @param projectName
-	 * @param installationId
-	 */
-	public async CreateProjectCardAsync(projectName: string, installationId: string): Promise<void> {
-		return await HttpClient.PostAsync(`/projects/columns/${projectName}/cards`, {
-			'content_id': this.id,
-			'content_type': 'PullRequest'
-		}, installationId);
-	}
+
 }
 
 export interface PullRequest {

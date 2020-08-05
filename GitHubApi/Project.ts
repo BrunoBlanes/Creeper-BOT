@@ -15,78 +15,64 @@ export class Project {
 	/**
 	 * Get a project by name
 	 * @param projectName
-	 * @param reposUrl
+	 * @param projectsUrl
 	 * @param installationId
 	 */
-	public static async GetSingleAsync(
+	public static async GetAsync(
 		projectName: string,
-		reposUrl: string,
+		projectsUrl: string,
 		installationId: string): Promise<Project> {
-		let projects: Array<Project> = await this.ListAsync(`${reposUrl}/projects`, installationId);
+		let projects: Array<Project> = await this.ListAsync(projectsUrl, installationId);
 
 		// Finds the proper project
 		projects.forEach(function (project: Project) { if (project.name == projectName) return project; });
-		throw new Error(`Could not find project "${projectName}" at ${reposUrl}`);
+		throw new Error(`Could not find project "${projectName}" at ${projectsUrl}`);
+	}
+
+	/**
+	 * List project columns
+	 * https://docs.github.com/en/rest/reference/projects#list-project-columns
+	 * @param installationId
+	 */
+	public async ListColumnsAsync(installationId: string): Promise<Array<Column>> {
+		return await HttpClient.GetAsync<Array<Column>>(`/projects/${this.id}/columns`, installationId);
+	}
+
+	public async GetFirstColumnIdAsync(installationId: string): Promise<number> {
+		let columns: Array<Column> = await this.ListColumnsAsync(installationId);
+		columns.
 	}
 }
 
 export class Column {
 	/**
-	 * List project columns
-	 * https://docs.github.com/en/rest/reference/projects#list-project-columns
-	 * @param columnsUrl
+	 * List project cards
+	 * https://docs.github.com/en/rest/reference/projects#list-project-cards
 	 * @param installationId
 	 */
-	public static async ListColumns(columnsUrl: string, installationId: string): Promise<Array<Column>> {
-		return await HttpClient.GetAsync<Array<Column>>(columnsUrl, installationId);
-	}
-
-	// Get project column id by column name
-	public static async GetIdAsync(name: string, id: number, installationId: string): Promise<number> {
-		let columns = await this.ListColumns(`/projects/${id}/columns`, installationId);
-
-		// Finds the proper column id
-		columns.forEach(function (column: Column) { if (column.name == name) return column.id; });
-		throw new Error(`Could not find column "${name}" in project ${id}`);
+	public async ListCardsAsync(installationId: string): Promise<Array<Card>> {
+		return await HttpClient.GetAsync<Array<Card>>(`/projects/columns/${this.url}/cards`, installationId);
 	}
 
 	/**
-	 * Get a project column
-	 * https://docs.github.com/en/rest/reference/projects#get-a-project-column
+	 * Create a project card
+	 * https://docs.github.com/en/rest/reference/projects#create-a-project-card
+	 * @param contentId
+	 * @param contentType
 	 * @param installationId
 	 */
-	public async GetNameAsync(installationId: string): Promise<string> {
-		return await (await HttpClient.GetAsync<Column>(this.url, installationId)).name;
+	public async CreateAsync(contentId: number, contentType: string, installationId: string): Promise<void> {
+		await HttpClient.PostAsync(`/projects/columns/${this.id}/cards`, {
+			'content_id': contentId,
+			'content_type': contentType
+		}, installationId);
 	}
 }
 
 export class Card {
 	/**
-	 * List project cards
-	 * https://docs.github.com/en/rest/reference/projects#list-project-cards
-	 * @param cardsUrl
-	 * @param installationId
-	 */
-	public static async ListAsync(cardsUrl: string, installationId: string): Promise<Array<Card>> {
-		return await HttpClient.GetAsync<Array<Card>>(cardsUrl, installationId);
-	}
-
-	// Get project card id by column id and issue url
-	public static async GetIdAsync(
-		columnId: number,
-		contentId: string,
-		installationId: string): Promise<number> {
-		let cards: Array<Card> = await this.ListAsync(`/projects/columns/${columnId}/cards`, installationId);
-
-		// Finds the proper card
-		cards.forEach(function (card: Card) { if (card.content_url == contentId) return card.id; });
-		throw new Error(`Could not find a card associated with the content at ${contentId}.`);
-	}
-
-	/**
 	 * Move a project card
 	 * https://docs.github.com/en/rest/reference/projects#move-a-project-card
-	 * @param currentColumnName
 	 * @param columnId
 	 * @param installationId
 	 */

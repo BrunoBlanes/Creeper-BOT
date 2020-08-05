@@ -1,4 +1,6 @@
+import { plainToClass } from 'class-transformer';
 import { HttpClient } from '../Services';
+import { Card, Project } from './Project';
 import { User } from './User';
 
 export class Issue {
@@ -8,8 +10,13 @@ export class Issue {
 	 * @param url
 	 * @param installationId
 	 */
-	public static async ListAsync(url: string, installationId: string): Promise<Array<Issue>> {
-		return await HttpClient.GetAsync<Array<Issue>>(url, installationId);
+	public static async ListAsync(owner: string, repo: string): Promise<Array<Issue>> {
+		let response = await HttpClient.request(`GET /repos/:owner/:repo/issues`, {
+			owner: owner,
+			repo: repo
+		});
+
+		return plainToClass(Issue, response.data);
 	}
 
 	/**
@@ -94,7 +101,34 @@ export class Issue {
 	 * @param projectName
 	 * @param installationId
 	 */
-	public async CreateProjectCardAsync(projectName: string, installationId: string): Promise<void> {
+	public async CreateProjectCardAsync(projectsUrl: string, installationId: string): Promise<void> {
+		let project: Project;
+
+		this.labels.forEach(async function (label: Label) {
+
+			// Assigns this issue to the 'WebAssembly' project
+			if (label.name == 'Identity' || label.name == 'WebAssembly') {
+				project = await Project.GetAsync('WebAssembly', projectsUrl, installationId);
+
+			// Assigns this issue to the 'Server' project
+			} else if (label.name == 'API' || label.name == 'Database') {
+				project = await Project.GetAsync('Server', projectsUrl, installationId);
+
+			// Assigns this issue to the 'Windows' project
+			} else if (label.name == 'Windows') {
+				project = await Project.GetAsync('Windows', projectsUrl, installationId);
+
+			// Assigns this issue to the 'Android' project
+			} else if (label.name == 'Android') {
+				project = await Project.GetAsync('Android', projectsUrl, installationId);
+
+			// Assigns this issue to the 'iOS' project
+			} else if (label.name == 'iOS') {
+				project = await Project.GetAsync('iOS', projectsUrl, installationId);
+			}
+		});
+
+		let columnId = await project.GetFirstColumnIdAsync();
 		return await HttpClient.PostAsync(`/projects/columns/${projectName}/cards`, {
 			'content_id': this.id,
 			'content_type': 'Issue'
