@@ -1,28 +1,13 @@
-import { createAppAuth } from '@octokit/auth-app';
-import { Card, Project } from './Project';
-import { Octokit } from '@octokit/core';
-import { Azure } from '../Services';
+import { octokit } from '../Services/Octokit';
+import { Project } from './Project';
 import { User } from './User';
-
-const octokit = new Octokit({
-	authStrategy: createAppAuth,
-	auth: {
-		id: 72569,
-		privateKey: Azure.PrivateKey
-	},
-	previews: [
-		'machine-man',
-	],
-	userAgent: 'Creeper-Bot',
-	timeZone: 'America/Sao_Paulo'
-});
 
 export class Issue {
 	/**
 	 * List repository issues
 	 * https://docs.github.com/en/rest/reference/issues#list-repository-issues
-	 * @param url
-	 * @param installationId
+	 * @param owner
+	 * @param repo
 	 */
 	public static async ListAsync(owner: string, repo: string): Promise<Array<Issue>> {
 		let response = await octokit.request('GET /repos/:owner/:repo/issues', {
@@ -81,18 +66,19 @@ export class Issue {
 	/**
 	 * Update an issue
 	 * https://docs.github.com/en/rest/reference/issues#update-an-issue
-	 * @param labelNames
-	 * @param milestoneId
-	 * @param installationId
+	 * @param owner
+	 * @param repo
 	 */
-	public async UpdateAsync(
-		labelNames: Array<string>,
-		milestoneId: number,
-		installationId: string): Promise<void> {
-		await HttpClient.PatchAsync(this.url, {
-			'milestone': milestoneId,
-			'labels': labelNames
-		}, installationId);
+	public async UpdateAsync(owner: string, repo: string): Promise<void> {
+		await octokit.request('PATCH /repos/:owner/:repo/issues/:issue_number', {
+			owner: owner,
+			repo: repo,
+			issue_number: this.number,
+			title: this.title,
+			body: this.body,
+			milestone: this.milestone.number,
+			labels: this.labels as unknown as string[],
+		});
 	}
 
 	/**

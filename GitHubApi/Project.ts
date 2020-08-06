@@ -1,4 +1,3 @@
-import { HttpClient } from '../Services';
 import { User } from './User';
 
 export class Project {

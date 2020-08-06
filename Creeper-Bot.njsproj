@@ -16,7 +16,7 @@ AZURE_TENANT_ID=33d6dc3d-32f7-4da6-803f-134b326a4c73</Environment>
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>2d418db4-af5d-4253-9726-920f49f97bc9</ProjectGuid>
     <ProjectHome>.</ProjectHome>
-    <StartupFile>server.js</StartupFile>
+    <StartupFile>Services\Octokit.ts</StartupFile>
     <SearchPath>
     </SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
@@ -37,7 +37,7 @@ AZURE_TENANT_ID=33d6dc3d-32f7-4da6-803f-134b326a4c73</Environment>
     <None Include="Creeper-Bot - Web Deploy.pubxml" />
     <Content Include="GitHubApi\Commit.ts" />
     <Content Include="GitHubApi\PullRequest.ts" />
-    <Content Include="Services.ts" />
+    <Content Include="Services\Octokit.ts" />
     <Content Include="GitHubApi\Project.ts" />
     <Content Include="GitHubApi\Issue.ts" />
     <Content Include="tsconfig.json">
@@ -50,6 +50,7 @@ AZURE_TENANT_ID=33d6dc3d-32f7-4da6-803f-134b326a4c73</Environment>
   </ItemGroup>
   <ItemGroup>
     <Folder Include="GitHubApi\" />
+    <Folder Include="Services\" />
   </ItemGroup>
   <ItemGroup>
     <TypeScriptCompile Include="GitHubApi\Milestone.ts">
@@ -59,6 +60,9 @@ AZURE_TENANT_ID=33d6dc3d-32f7-4da6-803f-134b326a4c73</Environment>
       <SubType>Code</SubType>
     </TypeScriptCompile>
     <TypeScriptCompile Include="server.ts">
+      <SubType>Code</SubType>
+    </TypeScriptCompile>
+    <TypeScriptCompile Include="Services\Azure.ts">
       <SubType>Code</SubType>
     </TypeScriptCompile>
   </ItemGroup>
