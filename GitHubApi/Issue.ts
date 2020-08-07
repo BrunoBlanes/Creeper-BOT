@@ -78,15 +78,16 @@ export class Issue {
 	 */
 	public async CreateProjectCardAsync(): Promise<void> {
 		let projects: Project[] = await Project.ListAsync(this.owner(), this.repo(), 'open');
+		let project: Project;
 		let column: Column;
 
-		for (let label: Label of this.labels) {
+		for (let label of this.labels) {
+			project = projects.filter(x => x.name == label.name)[0];
 
-			// Found a project label
-			if (projects.some(x => x.name == label.name)) {
+			if (project) {
 
 				// Get the first column of said project
-				column = await projects.filter(x => x.name == label.name)[0].GetColumnAsync();
+				column = await project.GetColumnAsync();
 				break;
 			}
 		}
@@ -102,53 +103,12 @@ export class Issue {
 			}
 		});
 
-		if (response.status !== 201) throw new Error(`Could not create card at project "${}`);
-	}
-
-	/**
-	 * Set labels for an issue
-	 * https://docs.github.com/en/rest/reference/issues#set-labels-for-an-issue
-	 * @param labelNames
-	 * @param installationId
-	 */
-	public async SetLabelsAsync(labelNames: Array<string>, installationId: string): Promise<void> {
-		await HttpClient.PutAsync(`${this.url}/labels`, { 'labels': labelNames }, installationId);
-	}
-
-	/**
-	 * Remove a label from an issue
-	 * https://docs.github.com/en/rest/reference/issues#remove-a-label-from-an-issue
-	 * @param labelName
-	 * @param installationId
-	 */
-	public async RemoveLabelAsync(labelName: string, installationId: string): Promise<void> {
-		await HttpClient.DeleteAsync(`${this.url}/labels/${labelName}`, installationId);
-	}
-
-	/**
-	 * Remove all labels from an issue
-	 * https://docs.github.com/en/rest/reference/issues#remove-all-labels-from-an-issue
-	 * @param installationId
-	 */
-	public async RemoveAllLabelsAsync(installationId: string): Promise<void> {
-		await HttpClient.DeleteAsync(`${this.url}/labels`, installationId);
+		if (response.status !== 201) throw new Error(`Could not create card for issue ${this.id} at column "${column.name}" of project "${project.name}".`);
 	}
 }
 
 export class Label {
-	/**
-	 * Get a label
-	 * https://docs.github.com/en/rest/reference/issues#get-a-label
-	 * @param label
-	 * @param labelsUrl
-	 * @param installationId
-	 */
-	public static async GetSingleAsync(
-		labelName: string,
-		labelsUrl: string,
-		installationId: string): Promise<Label> {
-		return await HttpClient.GetAsync<Label>(`${labelsUrl}/${labelName}`, installationId);
-	}
+
 }
 
 export interface Label {
