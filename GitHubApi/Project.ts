@@ -1,71 +1,56 @@
+import { octokit } from '../Services/Octokit';
 import { User } from './User';
 
 export class Project {
 	/**
 	 * List repository projects
 	 * https://docs.github.com/en/rest/reference/projects#list-repository-projects
-	 * @param projectsUrl
-	 * @param installationId
+	 * @param owner
+	 * @param repo
 	 */
-	public static async ListAsync(projectsUrl: string, installationId: string): Promise<Array<Project>> {
-		return await HttpClient.GetAsync<Array<Project>>(projectsUrl, installationId);
+	public static async ListAsync(owner: string, repo: string, state?: 'open' | 'closed' | 'all'): Promise<Project[]> {
+		let response = await octokit.request('GET /repos/:owner/:repo/projects', {
+			owner: owner,
+			repo: repo,
+			state: state,
+			mediaType: {
+				previews: [
+					'inertia'
+				]
+			}
+		});
+
+		if (response.status === 200)
+			return response.data as unknown as Project[];
+		else if (response.status === 404)
+			throw new Error(`Projects are disabled in the repository "${repo}".`);
+		else if (response.status === 401 || response.status === 410)
+			throw new Error(`You do not have sufficient privileges to list projects for the repository "${repo}".`);
+		throw new Error(`Could not retrieve a list of projects for repository "${repo}" of owner "${owner}". \n Octokit returned error ${response.status}.`);
 	}
 
 	/**
-	 * Get a project by name
-	 * @param projectName
-	 * @param projectsUrl
-	 * @param installationId
+	 * Get the first project column
+	 * https://docs.github.com/en/rest/reference/projects#get-a-project-column
+	 *  @param index The column index. Returns the first column if not specified.
 	 */
-	public static async GetAsync(
-		projectName: string,
-		projectsUrl: string,
-		installationId: string): Promise<Project> {
-		let projects: Array<Project> = await this.ListAsync(projectsUrl, installationId);
+	public async GetColumnAsync(index?: number): Promise<Column> {
+		let response = await octokit.request('GET /projects/:project_id/columns', {
+			project_id: this.id,
+			per_page: index ?? 1,
+			mediaType: {
+				previews: [
+					'inertia'
+				]
+			}
+		});
 
-		// Finds the proper project
-		projects.forEach(function (project: Project) { if (project.name == projectName) return project; });
-		throw new Error(`Could not find project "${projectName}" at ${projectsUrl}`);
-	}
-
-	/**
-	 * List project columns
-	 * https://docs.github.com/en/rest/reference/projects#list-project-columns
-	 * @param installationId
-	 */
-	public async ListColumnsAsync(installationId: string): Promise<Array<Column>> {
-		return await HttpClient.GetAsync<Array<Column>>(`/projects/${this.id}/columns`, installationId);
-	}
-
-	public async GetFirstColumnIdAsync(installationId: string): Promise<number> {
-		let columns: Array<Column> = await this.ListColumnsAsync(installationId);
-		columns.
+		if (response.status === 200) return response.data[0] as unknown as Column;
+		throw new Error(`Could not retrieve a list of columns for project id ${this.id}.`);
 	}
 }
 
 export class Column {
-	/**
-	 * List project cards
-	 * https://docs.github.com/en/rest/reference/projects#list-project-cards
-	 * @param installationId
-	 */
-	public async ListCardsAsync(installationId: string): Promise<Array<Card>> {
-		return await HttpClient.GetAsync<Array<Card>>(`/projects/columns/${this.url}/cards`, installationId);
-	}
-
-	/**
-	 * Create a project card
-	 * https://docs.github.com/en/rest/reference/projects#create-a-project-card
-	 * @param contentId
-	 * @param contentType
-	 * @param installationId
-	 */
-	public async CreateAsync(contentId: number, contentType: string, installationId: string): Promise<void> {
-		await HttpClient.PostAsync(`/projects/columns/${this.id}/cards`, {
-			'content_id': contentId,
-			'content_type': contentType
-		}, installationId);
-	}
 }
 
 export class Card {

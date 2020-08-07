@@ -1,5 +1,5 @@
 import { octokit } from '../Services/Octokit';
-import { Project } from './Project';
+import { Project, Column } from './Project';
 import { User } from './User';
 
 export class Issue {
@@ -27,7 +27,7 @@ export class Issue {
 		});
 
 		if (response.status === 200) this.labels = response.data;
-		throw new Error(`Could not assign list of labels to issue number ${this.number} for owner "${this.owner()}" and repo "${this.repo()}"`);
+		throw new Error(`Could not assign list of labels to issue number ${this.number} of repository "${this.repo()}".\n Octokit returned error ${response.status}.`);
 	}
 
 	/**
@@ -49,12 +49,12 @@ export class Issue {
 
 				if (response.status === 404) {
 					assignees.splice(assignees.indexOf(assignee), 1);
-					console.warn(`User "${assignee}" does not have permission to be assigned to issue ${this.number} of owner "${this.owner()}" and repo "${this.repo()}".`);
+					console.warn(`User "${assignee}" does not have permission to be assigned to issue ${this.number} of repository "${this.repo()}".`);
 				}
 
 				else if (response.status !== 204) {
 					assignees.splice(assignees.indexOf(assignee), 1);
-					console.error(`Could not check if user "${assignee}" has permission to be assigned to issue ${this.number} of owner "${this.owner()}" and repo "${this.repo()}".\n Octokit returned error ${response.status}.`);
+					console.error(`Could not check if user "${assignee}" has permission to be assigned to issue ${this.number} of repository "${this.repo()}".\n Octokit returned error ${response.status}.`);
 				}
 			});
 		}
@@ -68,8 +68,41 @@ export class Issue {
 			});
 
 			if (response.status === 201) this.assignees = response.data.assignees;
-			else throw new Error(`Could not add assignees to issue ${this.number} of owner "${this.owner()}" and repo "${this.repo()}".\n Octokit returned error ${response.status}.`);
-		} else console.warn('Assignees list was empty, skipping adding assignees to the issue.');
+			else throw new Error(`Could not add assignees to issue ${this.number} of repository "${this.repo()}".\n Octokit returned error ${response.status}.`);
+		} else console.warn(`Assignees list was empty, skipping adding assignees to issue ${this.number}.`);
+	}
+
+	/**
+	 * Create a project card
+	 * https://docs.github.com/en/rest/reference/projects#create-a-project-card
+	 */
+	public async CreateProjectCardAsync(): Promise<void> {
+		let projects: Project[] = await Project.ListAsync(this.owner(), this.repo(), 'open');
+		let column: Column;
+
+		for (let label: Label of this.labels) {
+
+			// Found a project label
+			if (projects.some(x => x.name == label.name)) {
+
+				// Get the first column of said project
+				column = await projects.filter(x => x.name == label.name)[0].GetColumnAsync();
+				break;
+			}
+		}
+
+		let response = await octokit.request('POST /projects/columns/:column_id/cards', {
+			column_id: column.id,
+			content_id: this.id,
+			content_type: 'Issue',
+			mediaType: {
+				previews: [
+					'inertia'
+				]
+			}
+		});
+
+		if (response.status !== 201) throw new Error(`Could not create card at project "${}`);
 	}
 
 	/**
@@ -99,47 +132,6 @@ export class Issue {
 	 */
 	public async RemoveAllLabelsAsync(installationId: string): Promise<void> {
 		await HttpClient.DeleteAsync(`${this.url}/labels`, installationId);
-	}
-
-	/**
-	 * Create a project card
-	 * https://docs.github.com/en/rest/reference/projects#create-a-project-card
-	 * @param issueId
-	 * @param projectName
-	 * @param installationId
-	 */
-	public async CreateProjectCardAsync(projectsUrl: string, installationId: string): Promise<void> {
-		let project: Project;
-
-		this.labels.forEach(async function (label: Label) {
-
-			// Assigns this issue to the 'WebAssembly' project
-			if (label.name == 'Identity' || label.name == 'WebAssembly') {
-				project = await Project.GetAsync('WebAssembly', projectsUrl, installationId);
-
-			// Assigns this issue to the 'Server' project
-			} else if (label.name == 'API' || label.name == 'Database') {
-				project = await Project.GetAsync('Server', projectsUrl, installationId);
-
-			// Assigns this issue to the 'Windows' project
-			} else if (label.name == 'Windows') {
-				project = await Project.GetAsync('Windows', projectsUrl, installationId);
-
-			// Assigns this issue to the 'Android' project
-			} else if (label.name == 'Android') {
-				project = await Project.GetAsync('Android', projectsUrl, installationId);
-
-			// Assigns this issue to the 'iOS' project
-			} else if (label.name == 'iOS') {
-				project = await Project.GetAsync('iOS', projectsUrl, installationId);
-			}
-		});
-
-		let columnId = await project.GetFirstColumnIdAsync();
-		return await HttpClient.PostAsync(`/projects/columns/${projectName}/cards`, {
-			'content_id': this.id,
-			'content_type': 'Issue'
-		}, installationId);
 	}
 }
 

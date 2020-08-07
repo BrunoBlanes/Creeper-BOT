@@ -9,7 +9,7 @@ export const octokit = new Octokit({
 		privateKey: Azure.PrivateKey
 	},
 	previews: [
-		'machine-man',
+		'machine-man'
 	],
 	userAgent: 'Creeper-Bot',
 	timeZone: 'America/Sao_Paulo'

@@ -1,6 +1,6 @@
 import { Azure, Validator } from './Services/Azure';
 import { Payload } from './GitHubApi/Webhook';
-import { Issue } from './GitHubApi/Issue';
+import { Issue, Label } from './GitHubApi/Issue';
 import * as HttpServer from 'http';
 
 const port = process.env.port || 1337
@@ -30,53 +30,21 @@ HttpServer.createServer(function (req, res) {
 					if (event.action === 'opened') {
 
 						// Add the label 'Triage'
-						if (issue.labels.filter(label => label.name === 'Bug')) {
+						if (issue.labels.some(label => label.name === 'Bug')) {
 							await issue.AddLabelsAsync(['Triage']);
 						} else {
+
 							// If it isn't a bug, add the 'Task' label too
 							await issue.AddLabelsAsync(['Task', 'Triage']);
 						}
 
-						// Assigns myself to this issue
+						// Assign myself to this issue
 						await issue.AddAssigneesAsync(['BrunoBlanes']);
 
+						// Create project card
+						await issue.CreateProjectCardAsync();
 
-						for (var i = 0; i < labels.length; i++) {
-							logSection('CREATE A PROJECT CARD FOR THIS ISSUE');
-
-							// Assigns this issue to the 'WebAssembly' project
-							if (labels[i]['name'] == 'Identity' || labels[i]['name'] == 'WebAssembly') {
-								response = await cards.CreateFromIssue(issueId, project.WASM, installationId);
-								console.log(response);
-								break;
-
-								// Assigns this issue to the 'Server' project
-							} else if (labels[i]['name'] == 'API' || labels[i]['name'] == 'Database') {
-								response = await cards.CreateFromIssue(issueId, project.API, installationId);
-								console.log(response);
-								break;
-
-								// Assigns this issue to the 'Windows' project
-							} else if (labels[i]['name'] == 'Windows') {
-								response = await cards.CreateFromIssue(issueId, project.WINDOWS, installationId);
-								console.log(response);
-								break;
-
-								// Assigns this issue to the 'Android' project
-							} else if (labels[i]['name'] == 'Android') {
-								response = await cards.CreateFromIssue(issueId, project.ANDROID, installationId);
-								console.log(response);
-								break;
-
-								// Assigns this issue to the 'iOS' project
-							} else if (labels[i]['name'] == 'iOS') {
-								response = await cards.CreateFromIssue(issueId, project.IOS, installationId);
-								console.log(response);
-								break;
-							}
-						}
-
-						// Label was added to this issue
+					// Label was added to this issue
 					} else if (event.action == 'labeled') {
 
 						// Found label 'Awaiting Pull Request'
