@@ -1,57 +1,44 @@
-import { Azure, Validator } from './Services';
+import { Azure, Validator } from './Services/Azure';
+import { Repository } from './GitHubApi/Repository';
+import { Issue, Label } from './GitHubApi/Issue';
+import { User } from './GitHubApi/User';
 import * as HttpServer from 'http';
 
 const port = process.env.port || 1337
-
 Azure.SetPrivateSecret();
 
 HttpServer.createServer(function (req, res) {
-	// Only accept on POST requests
+
+	// Only accept POST requests
 	if (req.method == 'POST') {
-		let body = '';
-		req.on('data', chunk => { body += chunk; });
+		let body: string;
+		req.on('data', (chunk: string) => { body += chunk; });
 		req.on('end', async () => {
 
 			// Validates webhook secret and reject if invalid
-			if (await githook.ValidateSecret(body, req.headers['x-hub-signature'])) {
+			if (await Validator.ValidateSecretAsync(body, req.rawHeaders['x-hub-signature'])) {
 
 				// Parse as json
-				body = JSON.parse(body);
-				let installationId = body['installation']['id'];
+				let event: WebhookPayload = JSON.parse(body);
 
 				// Handle events related to issues
-				if (req.headers['x-github-event'] == 'issues') {
-					let labelsUrl = body['repository']['labels_url'].replace('{/name}', '');
-					let reposUrl = body['issue']['repository_url'];
-					let labels = body['issue']['labels'];
-					let issueUrl = body['issue']['url'];
-					let issueId = body['issue']['id'];
+				// https://docs.github.com/en/developers/webhooks-and-events/webhook-events-and-payloads#issues
+				if (req.rawHeaders['x-github-event'] === 'issues') {
+					let labelsUrl: string = event.repository.labels_url.replace('{/name}', '');
+					let issue: Issue = event.issue;
 
 					// New issue opened
-					if (body['action'] == 'opened') {
+					if (event.action === 'opened') {
 
-						// Assigns label 'Triage' to issue
-						logSection('ASSIGN LABEL "TRIAGE" TO NEW ISSUE');
-						let response;
-
-						// Look for label 'Bug'
-						for (var i = 0; i < labels.length; i++) {
-							if (labels[i]['name'] == 'Bug') {
-
-								// If it is a bug just add if to triage
-								response = await issues.AssignLabelsToIssue(['Triage'], issueUrl, installationId);
-								break;
-							} else if (i == labels.length - 1) {
-
-								// If not a bug add it as a task for triage
-								response = await issues.AssignLabelsToIssue(['Task', 'Triage'], issueUrl, installationId);
-							}
+						// Add the label 'Triage'
+						if (issue.labels.filter(label => label.name === 'Bug')) {
+							await issue.AddLabelsAsync(['Triage']);
+						} else {
+							// If it isn't a bug, add the 'Task' label too
+							await issue.AddLabelsAsync(['Task', 'Triage']);
 						}
 
-						console.log(response);
-
 						// Assigns myself to this issue
-						logSection('ASSIGN USER "BRUNO BLANES" TO NEW ISSUE');
 						response = await issues.AssignUserToIssue('BrunoBlanes', reposUrl, issueUrl, installationId);
 						console.log(response);
 
@@ -91,7 +78,7 @@ HttpServer.createServer(function (req, res) {
 						}
 
 						// Label was added to this issue
-					} else if (body['action'] == 'labeled') {
+					} else if (event.action == 'labeled') {
 
 						// Found label 'Awaiting Pull Request'
 						if (body['label']['name'] == 'Awaiting Pull Request') {
@@ -109,7 +96,7 @@ HttpServer.createServer(function (req, res) {
 						}
 
 						// Handle issue being closed
-					} else if (body['action'] == 'closed') {
+					} else if (event.action == 'closed') {
 						let response;
 
 						for (var i = 0; i < labels.length; i++) {
@@ -129,7 +116,7 @@ HttpServer.createServer(function (req, res) {
 					}
 
 					// Handle project card events
-				} else if (req.headers['x-github-event'] == 'project_card') {
+				} else if (req.rawHeaders['x-github-event'] == 'project_card') {
 
 					// Only if card is based on an issue
 					if (body['project_card']['content_url']) {
@@ -169,7 +156,7 @@ HttpServer.createServer(function (req, res) {
 					}
 
 					// Handle push events
-				} else if (req.headers['x-github-event'] == 'push') {
+				} else if (req.rawHeaders['x-github-event'] == 'push') {
 					let pushCommits = body['commits'];
 					let issueUrl = body['repository']['issues_url'].replace('{/number}', '');
 					let labelsUrl = body['repository']['labels_url'].replace('{/name}', '');
@@ -183,7 +170,7 @@ HttpServer.createServer(function (req, res) {
 					}
 
 					// Handle pull request events
-				} else if (req.headers['x-github-event'] == 'pull_request') {
+				} else if (req.rawHeaders['x-github-event'] == 'pull_request') {
 					let prUrl = body['pull_request']['url'];
 					let prBody = body['pull_request']['body'];
 					let commitsUrl = body['pull_request']['commits_url'];
@@ -229,7 +216,7 @@ HttpServer.createServer(function (req, res) {
 					}
 
 					// Handle workflow events
-				} else if (req.headers['x-github-event'] == 'workflow_run') {
+				} else if (req.rawHeaders['x-github-event'] == 'workflow_run') {
 
 					// Workflow completed
 					if (body['action'] == 'completed') {
@@ -240,7 +227,8 @@ HttpServer.createServer(function (req, res) {
 
 		res.end();
 	} else {
-		res.writeHeader(200, { 'Content-Type': 'text/html' });
+		res.statusCode = 200;
+		res.setHeader('Content-Type', 'text/html');
 		res.write('<p>Creeper-Bot is a bot created by Bruno Blanes to automate his personal GitHub account.<p>You can find more about him at <a href="https://github.com/BrunoBlanes/Creeper-Bot/">https://github.com/BrunoBlanes/Creeper-Bot/</a>', 'text/html; charset=utf-8');
 		res.end();
 	}
@@ -374,3 +362,12 @@ module.exports = {
 		}
 	}
 };
+
+interface WebhookPayload {
+	action: string;
+	sender: User;
+	repository: Repository;
+	organization: User;
+	installation: any;
+	issue: Issue;
+}

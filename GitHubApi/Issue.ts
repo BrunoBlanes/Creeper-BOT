@@ -3,101 +3,89 @@ import { Project } from './Project';
 import { User } from './User';
 
 export class Issue {
+	owner = () => {
+		let paths: string[] = this.repository_url.split('/');
+		return paths[paths.length - 2];
+	};
+
+	repo = () => {
+		let paths: string[] = this.repository_url.split('/');
+		return paths[paths.length - 1];
+	};
+
 	/**
 	 * List repository issues
 	 * https://docs.github.com/en/rest/reference/issues#list-repository-issues
 	 * @param owner
 	 * @param repo
 	 */
-	public static async ListAsync(owner: string, repo: string): Promise<Array<Issue>> {
+	public static async ListAsync(owner: string, repo: string): Promise<Issue[]> {
 		let response = await octokit.request('GET /repos/:owner/:repo/issues', {
 			owner: owner,
 			repo: repo
 		});
 
-		if (response.status == 200) return response.data as unknown as Issue[];
+		if (response.status === 200) return response.data as unknown as Issue[];
 		throw new Error(`Could not retrieve list of issues for owner "${owner}" and repo "${repo}"`)
 	}
 
 	/**
 	 * Add assignees to an issue
 	 * https://docs.github.com/en/rest/reference/issues#add-assignees-to-an-issue
-	 * @param owner
-	 * @param repo
 	 * @param assignees Usernames of people to assign this issue to.
 	 * 
 	 * NOTE: Only users with push access can add assignees to an issue. Assignees are silently ignored otherwise.
 	*/
-	public async AssignUsersAsync(owner: string, repo: string, assignees: Array<string>): Promise<void> {
+	public async AssignUsersAsync(assignees: Array<string>): Promise<void> {
 		if (assignees.length > 10) throw new Error('Maximum assignees allowed is 10.');
 		else {
-			assignees.forEach(async function (assignee: string) {
+			assignees.forEach(async (assignee: string) => {
 				let response = await octokit.request('GET /repos/:owner/:repo/assignees/:assignee', {
-					owner: owner,
-					repo: repo,
+					owner: this.owner(),
+					repo: this.repo(),
 					assignee: assignee
 				});
 
-				if (response.status == 404) {
+				if (response.status === 404) {
 					assignees.splice(assignees.indexOf(assignee), 1);
-					console.warn(`User "${assignee}" does not have permission to be assigned to issue ${this.number} of owner "${owner}" and repo "${repo}".`);
+					console.warn(`User "${assignee}" does not have permission to be assigned to issue ${this.number} of owner "${this.owner()}" and repo "${this.repo()}".`);
 				}
 
-				else if (response.status != 204) {
+				else if (response.status !== 204) {
 					assignees.splice(assignees.indexOf(assignee), 1);
-					console.error(`Could not check if user "${assignee}" has permission to be assigned to issue ${this.number} of owner "${owner}" and repo "${repo}".\n Octokit returned error ${response.status}.`);
+					console.error(`Could not check if user "${assignee}" has permission to be assigned to issue ${this.number} of owner "${this.owner()}" and repo "${this.repo()}".\n Octokit returned error ${response.status}.`);
 				}
 			});
 		}
 
 		if (assignees.length > 0) {
 			let response = await octokit.request('POST /repos/:owner/:repo/issues/:issue_number/assignees', {
-				owner: owner,
-				repo: repo,
+				owner: this.owner(),
+				repo: this.repo(),
 				issue_number: this.number,
 				assignees: assignees
 			});
 
-			if (response.status == 201) this.assignees = response.data.assignees;
-			else throw new Error(`Could not add assignees to issue ${this.number} of owner "${owner}" and repo "${repo}".\n Octokit returned error ${response.status}.`);
+			if (response.status === 201) this.assignees = response.data.assignees;
+			else throw new Error(`Could not add assignees to issue ${this.number} of owner "${this.owner()}" and repo "${this.repo()}".\n Octokit returned error ${response.status}.`);
 		} else console.warn('Assignees list was empty, skipping adding assignees to the issue.');
-	}
-
-	/**
-	 * Update an issue
-	 * https://docs.github.com/en/rest/reference/issues#update-an-issue
-	 * @param owner
-	 * @param repo
-	 */
-	public async UpdateAsync(owner: string, repo: string): Promise<void> {
-		await octokit.request('PATCH /repos/:owner/:repo/issues/:issue_number', {
-			owner: owner,
-			repo: repo,
-			issue_number: this.number,
-			title: this.title,
-			body: this.body,
-			milestone: this.milestone.number,
-			labels: this.labels as unknown as string[],
-		});
-	}
-
-	/**
-	 * List labels for an issue
-	 * https://docs.github.com/en/rest/reference/issues#list-labels-for-an-issue
-	 * @param installationId
-	 */
-	public async ListLabelsAsync(installationId: string): Promise<Array<Label>> {
-		return await HttpClient.GetAsync<Array<Label>>(`${this.url}/labels`, installationId);
 	}
 
 	/**
 	 * Add labels to an issue
 	 * https://docs.github.com/en/rest/reference/issues#add-labels-to-an-issue
-	 * @param labelNames
-	 * @param installationId
+	 * @param labels
 	 */
-	public async AddLabelsAsync(labelNames: Array<string>, installationId: string): Promise<void> {
-		await HttpClient.PostAsync(`${this.url}/labels`, { 'labels': labelNames }, installationId);
+	public async AddLabelsAsync(labels: Array<string>): Promise<void> {
+		let response = await octokit.request('POST /repos/:owner/:repo/issues/:issue_number/labels', {
+			owner: this.owner(),
+			repo: this.repo(),
+			issue_number: this.number,
+			labels: labels
+		});
+
+		if (response.status === 200) this.labels = response.data;
+		throw new Error(`Could not assign list of labels to issue number ${this.number} for owner "${this.owner()}" and repo "${this.repo()}"`);
 	}
 
 	/**
