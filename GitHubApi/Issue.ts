@@ -92,12 +92,40 @@ export class Issue {
 	}
 
 	/**
-	 * Move the project card associated with this issue to the specified column within the same project.
-	 * @param columnName The name of a column within the current project.
+	 * Move the project card associated with this issue to the specified column within the same project
+	 * @param columnName The name of a column within the current projectS
 	 */
 	public async MoveAssociatedCardAsync(columnName: string) {
 		let column: Column = await (await this.GetProjectAsync()).GetColumnAsync(columnName);
 		await (await this.GetProjectCardAsync()).MoveAsync(column);
+	}
+
+	/** Updates labels of closed issue */
+	public async UpdateClosedAsync(): Promise<void> {
+		let label: Label;
+		let labels: string[];
+		if (this.labels.some(x => x.name === 'Bug')) labels.push('Fixed');
+		else if (this.labels.some(x => x.name === 'Task')) labels.push('Complete');
+		if (label = this.labels.find(x => x.name === 'Awaiting Pull Request'))
+			this.labels.splice(this.labels.indexOf(label), 1);
+		this.labels.forEach(x => { labels.push(x.name); });
+		await this.UpdateLabelsAsync(labels);
+	}
+
+	/**
+	 * Update issue labels
+	 * https://docs.github.com/en/rest/reference/issues#update-an-issue
+	 * @param labels
+	 */
+	private async UpdateLabelsAsync(labels: string[]): Promise<void> {
+		let response = await octokit.request('PATCH /repos/:owner/:repo/issues/:issue_number', {
+			owner: this.owner(),
+			repo: this.repo(),
+			issue_number: this.number,
+			labels: labels
+		});
+
+		if (response.status !== 200) throw new Error(`Could not update labels for issue ${this.number} at "${this.repo()}".\n Octokit returned error ${response.status}.`);
 	}
 
 	/** Returns the project that matches the current project label */

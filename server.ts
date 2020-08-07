@@ -56,24 +56,11 @@ HttpServer.createServer(function (req, res) {
 								await issue.MoveAssociatedCardAsync('Done');
 							}
 
-							// Handle issue being closed
+							// TODO: Check if maybe project cards should be created here
+
+						// Issue closed event
 						} else if (event.action == 'closed') {
-							let response;
-
-							for (var i = 0; i < labels.length; i++) {
-								if (labels[i]['name'] == 'Bug') {
-
-									// Adds 'Fixed' label if this was a bug
-									response = await issues.UpdateLabels(['Fixed'], ['Awaiting Pull Request'], issueUrl, labelsUrl, installationId);
-									break;
-								} else if (i == labels.length - 1) {
-
-									// Adds the 'Complete' label otherwise
-									response = await issues.UpdateLabels(['Complete'], ['Awaiting Pull Request'], issueUrl, labelsUrl, installationId);
-								}
-							}
-
-							console.log(response);
+							await issue.UpdateClosedAsync();
 						}
 
 						// Handle project card events
