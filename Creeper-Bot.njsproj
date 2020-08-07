@@ -61,6 +61,9 @@ AZURE_TENANT_ID=33d6dc3d-32f7-4da6-803f-134b326a4c73</Environment>
     <TypeScriptCompile Include="GitHubApi\User.ts">
       <SubType>Code</SubType>
     </TypeScriptCompile>
+    <TypeScriptCompile Include="GitHubApi\Webhook.ts">
+      <SubType>Code</SubType>
+    </TypeScriptCompile>
     <TypeScriptCompile Include="server.ts">
       <SubType>Code</SubType>
     </TypeScriptCompile>

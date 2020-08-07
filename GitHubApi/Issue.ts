@@ -14,19 +14,20 @@ export class Issue {
 	};
 
 	/**
-	 * List repository issues
-	 * https://docs.github.com/en/rest/reference/issues#list-repository-issues
-	 * @param owner
-	 * @param repo
+	 * Add labels to an issue
+	 * https://docs.github.com/en/rest/reference/issues#add-labels-to-an-issue
+	 * @param labels
 	 */
-	public static async ListAsync(owner: string, repo: string): Promise<Issue[]> {
-		let response = await octokit.request('GET /repos/:owner/:repo/issues', {
-			owner: owner,
-			repo: repo
+	public async AddLabelsAsync(labels: Array<string>): Promise<void> {
+		let response = await octokit.request('POST /repos/:owner/:repo/issues/:issue_number/labels', {
+			owner: this.owner(),
+			repo: this.repo(),
+			issue_number: this.number,
+			labels: labels
 		});
 
-		if (response.status === 200) return response.data as unknown as Issue[];
-		throw new Error(`Could not retrieve list of issues for owner "${owner}" and repo "${repo}"`)
+		if (response.status === 200) this.labels = response.data;
+		throw new Error(`Could not assign list of labels to issue number ${this.number} for owner "${this.owner()}" and repo "${this.repo()}"`);
 	}
 
 	/**
@@ -36,7 +37,7 @@ export class Issue {
 	 * 
 	 * NOTE: Only users with push access can add assignees to an issue. Assignees are silently ignored otherwise.
 	*/
-	public async AssignUsersAsync(assignees: Array<string>): Promise<void> {
+	public async AddAssigneesAsync(assignees: Array<string>): Promise<void> {
 		if (assignees.length > 10) throw new Error('Maximum assignees allowed is 10.');
 		else {
 			assignees.forEach(async (assignee: string) => {
@@ -69,23 +70,6 @@ export class Issue {
 			if (response.status === 201) this.assignees = response.data.assignees;
 			else throw new Error(`Could not add assignees to issue ${this.number} of owner "${this.owner()}" and repo "${this.repo()}".\n Octokit returned error ${response.status}.`);
 		} else console.warn('Assignees list was empty, skipping adding assignees to the issue.');
-	}
-
-	/**
-	 * Add labels to an issue
-	 * https://docs.github.com/en/rest/reference/issues#add-labels-to-an-issue
-	 * @param labels
-	 */
-	public async AddLabelsAsync(labels: Array<string>): Promise<void> {
-		let response = await octokit.request('POST /repos/:owner/:repo/issues/:issue_number/labels', {
-			owner: this.owner(),
-			repo: this.repo(),
-			issue_number: this.number,
-			labels: labels
-		});
-
-		if (response.status === 200) this.labels = response.data;
-		throw new Error(`Could not assign list of labels to issue number ${this.number} for owner "${this.owner()}" and repo "${this.repo()}"`);
 	}
 
 	/**

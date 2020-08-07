@@ -1,7 +1,6 @@
 import { Azure, Validator } from './Services/Azure';
-import { Repository } from './GitHubApi/Repository';
-import { Issue, Label } from './GitHubApi/Issue';
-import { User } from './GitHubApi/User';
+import { Payload } from './GitHubApi/Webhook';
+import { Issue } from './GitHubApi/Issue';
 import * as HttpServer from 'http';
 
 const port = process.env.port || 1337
@@ -19,7 +18,7 @@ HttpServer.createServer(function (req, res) {
 			if (await Validator.ValidateSecretAsync(body, req.rawHeaders['x-hub-signature'])) {
 
 				// Parse as json
-				let event: WebhookPayload = JSON.parse(body);
+				let event: Payload = JSON.parse(body);
 
 				// Handle events related to issues
 				// https://docs.github.com/en/developers/webhooks-and-events/webhook-events-and-payloads#issues
@@ -39,8 +38,8 @@ HttpServer.createServer(function (req, res) {
 						}
 
 						// Assigns myself to this issue
-						response = await issues.AssignUserToIssue('BrunoBlanes', reposUrl, issueUrl, installationId);
-						console.log(response);
+						await issue.AddAssigneesAsync(['BrunoBlanes']);
+
 
 						for (var i = 0; i < labels.length; i++) {
 							logSection('CREATE A PROJECT CARD FOR THIS ISSUE');
@@ -362,12 +361,3 @@ module.exports = {
 		}
 	}
 };
-
-interface WebhookPayload {
-	action: string;
-	sender: User;
-	repository: Repository;
-	organization: User;
-	installation: any;
-	issue: Issue;
-}
