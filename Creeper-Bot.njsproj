@@ -44,7 +44,6 @@ AZURE_TENANT_ID=33d6dc3d-32f7-4da6-803f-134b326a4c73</Environment>
       <SubType>Code</SubType>
     </Content>
     <Content Include="Web.config" />
-    <Content Include="server.js" />
     <Content Include="package.json" />
     <Content Include="README.md" />
   </ItemGroup>
