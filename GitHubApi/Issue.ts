@@ -1,5 +1,5 @@
-import { octokit } from '../Services/Octokit';
 import { Project, Column, Card } from './Project';
+import { octokit } from '../Services/Octokit';
 import { User } from './User';
 
 export class Issue {
@@ -176,10 +176,6 @@ export class Issue {
 	}
 }
 
-export class Label {
-
-}
-
 export interface Label {
 	id: number;
 	node_id: string;
@@ -217,27 +213,6 @@ export interface Issue {
 	updated_at: Date;
 }
 
-export interface Creator {
-	login: string;
-	id: number;
-	node_id: string;
-	avatar_url: string;
-	gravatar_id: string;
-	url: string;
-	html_url: string;
-	followers_url: string;
-	following_url: string;
-	gists_url: string;
-	starred_url: string;
-	subscriptions_url: string;
-	organizations_url: string;
-	repos_url: string;
-	events_url: string;
-	received_events_url: string;
-	type: string;
-	site_admin: boolean;
-}
-
 export interface Milestone {
 	url: string;
 	html_url: string;
@@ -248,7 +223,7 @@ export interface Milestone {
 	state: string;
 	title: string;
 	description: string;
-	creator: Creator;
+	creator: User;
 	open_issues: number;
 	closed_issues: number;
 	created_at: Date;
@@ -257,6 +232,7 @@ export interface Milestone {
 	due_on: Date;
 }
 
+// TODO: See if this can be moved
 export interface PullRequest {
 	url: string;
 	html_url: string;

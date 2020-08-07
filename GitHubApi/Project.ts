@@ -126,6 +126,49 @@ export class Card {
 
 		if (response.status !== 201) throw new Error(`Could not move card ${this.id} to column "${column.name}".\n Octokit returned error ${response.status}.`);
 	}
+
+	/**
+	 * Get a project column
+	 * https://docs.github.com/en/rest/reference/projects#get-a-project-column
+	 */
+	public async GetColumnAsync(): Promise<Column> {
+		let response = await octokit.request('GET /projects/columns/:column_id', {
+			column_id: this.column_id,
+			mediaType: {
+				previews: [
+					'inertia'
+				]
+			}
+		});
+
+		if (response.status === 200) return response.data as unknown as Column;
+		throw new Error(`Could not retrieve column information for card ${this.id}.\n Octokit returned error ${response.status}.`);
+	}
+
+	public async UpdateAssociatedContentAsync(): Promise<void> {
+		let column: Column = await this.GetColumnAsync();
+
+		// Moved to column 'Triage'
+		if (column.name === 'Triage') {
+			// TODO: Add triage, remove working, fixed, complete, awaiting pr
+			// Remove pr association
+
+		// Moved to column 'In progress'
+		} else if (column.name === 'In progress') {
+			// TODO: Add working, remove triage, fixed, complete, awaiting pr
+			// Remove pr association
+
+		// Moved to column 'Done'
+		} else if (column.name === 'Done') {
+			// TODO: Add awaiting pr and fixed or complete, remove triage and working
+			// Add pr association
+
+		// Moved to a milestone column
+		} else {
+			// TODO: Add milestone to isse, remove triage, working, fixed, complete, awaiting pr
+			// Remove pr association
+		}
+	}
 }
 
 export interface Project {
@@ -157,14 +200,15 @@ export interface Column {
 
 export interface Card {
 	url: string;
+	project_url: string;
+	column_url: string;
+	column_id: number;
 	id: number;
 	node_id: string;
 	note: string;
+	archived: boolean;
 	creator: User;
 	created_at: Date;
 	updated_at: Date;
-	archived: boolean;
-	column_url: string;
 	content_url: string;
-	project_url: string;
 }

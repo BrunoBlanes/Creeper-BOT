@@ -1,7 +1,7 @@
 import { Azure, Validator } from './Services/Azure';
-import { Issue, Label } from './GitHubApi/Issue';
 import { Payload } from './GitHubApi/Webhook';
-import { Column } from './GitHubApi/Project';
+import { Card } from './GitHubApi/Project';
+import { Issue } from './GitHubApi/Issue';
 import * as HttpServer from 'http';
 
 const port = process.env.port || 1337
@@ -24,10 +24,9 @@ HttpServer.createServer(function (req, res) {
 				// Event is related to the 'Average CRM' repo
 				if (event.repository.name === 'Average CRM') {
 
-					// Handle events related to issues
+					// Handle issue events
 					// https://docs.github.com/en/developers/webhooks-and-events/webhook-events-and-payloads#issues
 					if (req.rawHeaders['x-github-event'] === 'issues') {
-						let labelsUrl: string = event.repository.labels_url.replace('{/name}', '');
 						let issue: Issue = event.issue;
 
 						// New issue opened event
@@ -63,47 +62,20 @@ HttpServer.createServer(function (req, res) {
 							await issue.UpdateClosedAsync();
 						}
 
-						// Handle project card events
-					} else if (req.rawHeaders['x-github-event'] == 'project_card') {
+					// Handle project cards events
+					} else if (req.rawHeaders['x-github-event'] === 'project_card') {
+						let card: Card = event.project_card;
 
-						// Only if card is based on an issue
-						if (body['project_card']['content_url']) {
+						// Card is not a note
+						if (card.content_url) {
 
-							// Handle card moved events
-							if (body['action'] == 'moved') {
-								logSection(`UPDATE AN ISSUE WHO'S CARD WAS MOVED`);
-								let issueUrl = body['project_card']['content_url'];
-								let columnUrl = body['project_card']['column_url'];
-								let labelsUrl = body['repository']['labels_url'].replace('{/name}', '');
-								let milestonesUrl = body['repository']['milestones_url'].replace('{/number}', '');
-
-								// Get the current card's column name
-								let columnName = await projects.GetColumnName(columnUrl, installationId);
-
-								// Moved to column 'Triage'
-								if (columnName == 'Triage') {
-									let response = await issues.ToTriage(issueUrl, labelsUrl, installationId);
-									console.log(response);
-
-									// Moved to column 'In progress'
-								} else if (columnName == 'In progress') {
-									let response = await issues.ToWorking(issueUrl, labelsUrl, installationId);
-									console.log(response);
-
-									// Moved to column 'Done'
-								} else if (columnName == 'Done') {
-									let response = await issues.ToDone(issueUrl, installationId);
-									console.log(response);
-
-									// Moved to a milestone column
-								} else {
-									let response = await issues.ToMilestone(columnName, milestonesUrl, issueUrl, installationId);
-									console.log(response);
-								}
+							// Card moved event
+							if (event.action === 'moved') {
+								await card.UpdateAssociatedContentAsync();
 							}
 						}
 
-						// Handle push events
+					// Handle push events
 					} else if (req.rawHeaders['x-github-event'] == 'push') {
 						let pushCommits = body['commits'];
 						let issueUrl = body['repository']['issues_url'].replace('{/number}', '');
@@ -182,113 +154,3 @@ HttpServer.createServer(function (req, res) {
 		res.end();
 	}
 }).listen(port);
-
-// Adds a cool section divider to the log
-function logSection(title) {
-	const maxSize = 115;
-	var textSize = title.length + 4;
-	var margin = '='.repeat((maxSize - textSize) / 2);
-	console.log('\n\n\x1b[36m ' + '='.repeat(maxSize));
-	if ((margin.length * 2 + textSize) % 2 == 0) {
-		console.log(` ${margin}  ${title}  ${margin}=`);
-	} else {
-		console.log(` ${margin}  ${title}  ${margin}`);
-	}
-	console.log(' ' + '='.repeat(maxSize) + '\n\x1b[0m\n');
-}
-
-function getAssignedProject(labels) {
-	for (var i = 0; i < labels.length; i++) {
-		if (labels[i]['name'] == 'Identity' || labels[i]['name'] == 'WebAssembly') {
-			return 'WebAssembly';
-		} else if (labels[i]['name'] == 'API' || labels[i]['name'] == 'Database') {
-			return 'Back-End';
-		} else if (labels[i]['name'] == 'Windows') {
-			return 'Windows';
-		} else if (labels[i]['name'] == 'Android') {
-			return 'Android';
-		} else if (labels[i]['name'] == 'iOS') {
-			return 'iOS';
-		}
-	}
-}
-
-function generateBody(prBody, prIssues) {
-	prBody += '\n\n\n\n**Creeper-bot:** This PR will';
-	if (prIssues.length == 1) {
-		prBody += ` close #${prIssues[i]}.`;
-	} else {
-
-		// Loop through all issues numbers in this pr
-		for (var i = 0; i < prIssues.length; i++) {
-			if (i == prIssues.length - 1) {
-				prBody = prBody.slice(0, -1);
-				prBody += ` and will close #${prIssues[i]}.`;
-			} else {
-				prBody += ` close #${prIssues[i]},`;
-			}
-		}
-	}
-
-	return prBody;
-}
-
-
-
-module.exports = {
-	// Updates an issue who's project card was moved back to 'Triage'
-	ToTriage: async function (issueUrl, labelsUrl, installationId) {
-		try {
-			let labels = await spliceLabels(['Working', 'Complete', 'Fixed'], ['Triage'], issueUrl, labelsUrl, installationId);
-			let body = await updateIssue(issueUrl, null, labels, installationId);
-			return body;
-		} catch (err) {
-			return err;
-		}
-	},
-
-	// Updates an issue who's project card was moved back to 'In progress'
-	ToWorking: async function (issueUrl, labelsUrl, installationId) {
-		try {
-			let labels = await spliceLabels(['Triage', 'Fixed', 'Complete'], ['Working'], issueUrl, labelsUrl, installationId);
-			let body = updateIssue(issueUrl, 0, labels, installationId);
-			return body;
-		} catch (err) {
-			return err;
-		}
-	},
-
-	// Updates an issue who's project card was moved to 'Done'
-	ToDone: async function (issueUrl, installationId) {
-		try {
-			let labels = await removeLabels(['Triage', 'Working'], issueUrl, installationId);
-			let body = updateIssue(issueUrl, 0, labels, installationId);
-			return body;
-		} catch (err) {
-			return err;
-		}
-	},
-
-	//Updates an issue who's project card was moved to a milestone column
-	ToMilestone: async function (columnName, milestonesUrl, issueUrl, installationId) {
-		try {
-			let milestoneNumber = await getMilestoneNumber(columnName, milestonesUrl, installationId);
-			let labels = await removeLabels(['Triage', 'Complete', 'Fixed', 'Working'], issueUrl, installationId);
-			let body = await updateIssue(issueUrl, milestoneNumber, labels, installationId);
-			return body;
-		} catch (err) {
-			return err;
-		}
-	},
-
-	// Updates the labels of an issue
-	UpdateLabels: async function (addLabels, removeLabels, issueUrl, labelsUrl, installationId) {
-		try {
-			let labels = await spliceLabels(removeLabels, addLabels, issueUrl, labelsUrl, installationId);
-			let body = await updateIssue(issueUrl, 0, labels, installationId);
-			return body;
-		} catch (err) {
-			return err;
-		}
-	}
-};
