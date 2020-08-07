@@ -77,23 +77,8 @@ export class Issue {
 	 * https://docs.github.com/en/rest/reference/projects#create-a-project-card
 	 */
 	public async CreateProjectCardAsync(): Promise<void> {
-		let projects: Project[] = await Project.ListAsync(this.owner(), this.repo(), 'open');
-		let project: Project;
-		let column: Column;
-
-		for (let label of this.labels) {
-			project = projects.filter(x => x.name == label.name)[0];
-
-			if (project) {
-
-				// Get the first column of said project
-				column = await project.GetColumnAsync();
-				break;
-			}
-		}
-
 		let response = await octokit.request('POST /projects/columns/:column_id/cards', {
-			column_id: column.id,
+			column_id: (await (await this.GetProjectAsync()).GetColumnAsync()).id,
 			content_id: this.id,
 			content_type: 'Issue',
 			mediaType: {
@@ -103,7 +88,42 @@ export class Issue {
 			}
 		});
 
-		if (response.status !== 201) throw new Error(`Could not create card for issue ${this.id} at column "${column.name}" of project "${project.name}".`);
+		if (response.status !== 201) throw new Error(`Could not create card for issue ${this.id}.`);
+	}
+
+	/** Returns the project that matches the current project label */
+	public async GetProjectAsync(): Promise<Project> {
+		let projects: Project[] = await Project.ListAsync(this.owner(), this.repo(), 'open');
+		let project: Project;
+
+		for (let label of this.labels) {
+			project = projects.filter(x => x.name == label.name)[0];
+
+			if (project) {
+				return project;
+			}
+		}
+	}
+
+	/** Returns the current project column where this issue's card is */
+	public async GetCurrentColumnAsync(): Promise<Column> {
+		let columnName: string;
+
+		for (let label of this.labels) {
+			if (label.name === 'Triage') {
+				columnName = 'Triage';
+				break;
+			} else if (label.name === 'Working') {
+				columnName = 'In progress';
+				break;
+			} else if (label.name === 'Complete' || label.name === 'Fixed') {
+				columnName = 'Done';
+				break;
+			}
+		}
+
+		columnName = this.milestone.title;
+		return await (await this.GetProjectAsync()).GetColumnAsync(columnName);
 	}
 }
 

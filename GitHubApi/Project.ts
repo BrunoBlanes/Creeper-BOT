@@ -30,23 +30,56 @@ export class Project {
 	}
 
 	/**
-	 * Get the first project column
+	 * Get the specified project column
 	 * https://docs.github.com/en/rest/reference/projects#get-a-project-column
 	 *  @param index The column index. Returns the first column if not specified.
 	 */
-	public async GetColumnAsync(index?: number): Promise<Column> {
-		let response = await octokit.request('GET /projects/:project_id/columns', {
-			project_id: this.id,
-			per_page: index ?? 1,
-			mediaType: {
-				previews: [
-					'inertia'
-				]
-			}
-		});
+	public async GetColumnAsync(index?: number): Promise<Column>;
 
-		if (response.status === 200) return response.data[0] as unknown as Column;
-		throw new Error(`Could not retrieve a list of columns for project id ${this.id}.`);
+	/**
+	 * Get the specified project column
+	 * https://docs.github.com/en/rest/reference/projects#get-a-project-column
+	 *  @param name The column name.
+	 */
+	public async GetColumnAsync(name: string): Promise<Column>;
+	public async GetColumnAsync(param: any): Promise<Column> {
+		let response;
+
+		if (param && typeof param == 'number') {
+			// Get the column at the specified index or the first one if not specified
+			response = await octokit.request('GET /projects/:project_id/columns', {
+				project_id: this.id,
+				per_page: param as number ?? 1,
+				mediaType: {
+					previews: [
+						'inertia'
+					]
+				}
+			});
+
+			if (response.status === 200) return response.data[0] as unknown as Column;
+		} else {
+			// Get all project columns then returns the one that matches the given name
+			response = await octokit.request('GET /projects/:project_id/columns', {
+				project_id: this.id,
+				mediaType: {
+					previews: [
+						'inertia'
+					]
+				}
+			});
+
+			if (response.status === 200) {
+				for (let column of response.data) {
+					if (column.name === param as string) {
+						return column as unknown as Column;
+					}
+				}
+			}
+		}
+
+		// If we've come this far, then something went wrong
+		throw new Error(`Could not retrieve a list of columns for project id ${this.id}. \n Octokit returned error ${response.status}.`);
 	}
 }
 
