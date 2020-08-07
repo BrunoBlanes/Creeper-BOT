@@ -1,5 +1,5 @@
 import { octokit } from '../Services/Octokit';
-import { Project, Column } from './Project';
+import { Project, Column, Card } from './Project';
 import { User } from './User';
 
 export class Issue {
@@ -91,8 +91,17 @@ export class Issue {
 		if (response.status !== 201) throw new Error(`Could not create card for issue ${this.id}.`);
 	}
 
+	/**
+	 * Move the project card associated with this issue to the specified column within the same project.
+	 * @param columnName The name of a column within the current project.
+	 */
+	public async MoveAssociatedCardAsync(columnName: string) {
+		let column: Column = await (await this.GetProjectAsync()).GetColumnAsync(columnName);
+		await (await this.GetProjectCardAsync()).MoveAsync(column);
+	}
+
 	/** Returns the project that matches the current project label */
-	public async GetProjectAsync(): Promise<Project> {
+	private async GetProjectAsync(): Promise<Project> {
 		let projects: Project[] = await Project.ListAsync(this.owner(), this.repo(), 'open');
 		let project: Project;
 
@@ -106,7 +115,7 @@ export class Issue {
 	}
 
 	/** Returns the current project column where this issue's card is */
-	public async GetCurrentColumnAsync(): Promise<Column> {
+	private async GetCurrentColumnAsync(): Promise<Column> {
 		let columnName: string;
 
 		for (let label of this.labels) {
@@ -124,6 +133,18 @@ export class Issue {
 
 		columnName = this.milestone.title;
 		return await (await this.GetProjectAsync()).GetColumnAsync(columnName);
+	}
+
+	private async GetProjectCardAsync(): Promise<Card> {
+		let cards: Card[] = await (await this.GetCurrentColumnAsync()).ListCardsAsync();
+
+		for (let card of cards) {
+			if (card.content_url === this.url) {
+				return card;
+			}
+		}
+
+		throw new Error(`Could not locate a card associated with issue ${this.id}.`);
 	}
 }
 

@@ -53,9 +53,7 @@ HttpServer.createServer(function (req, res) {
 
 							// Added the 'Awaiting Pull Request' label
 							if (event.label.name === 'Awaiting Pull Request') {
-								let columnName: Column = await issue.GetCurrentColumnAsync();
-								var projectName = getAssignedProject(body['issue']['labels']);
-								await cards.MoveCardToColumn(columnName, 'Done', projectName, issueUrl, reposUrl, installationId);
+								await issue.MoveAssociatedCardAsync('Done');
 							}
 
 							// Handle issue being closed

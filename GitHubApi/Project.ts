@@ -84,20 +84,47 @@ export class Project {
 }
 
 export class Column {
+	/**
+	 * List project cards
+	 * https://docs.github.com/en/rest/reference/projects#list-project-cards
+	 * @param state The column state.
+	 * Defaults to "not_archived" if no value is specified.
+	 */
+	public async ListCardsAsync(state?: 'all' | 'archived' | 'not_archived'): Promise<Card[]> {
+		let response = await octokit.request('GET /projects/columns/:column_id/cards', {
+			column_id: this.id,
+			archived_state: state ?? 'not_archived',
+			mediaType: {
+				previews: [
+					'inertia'
+				]
+			}
+		});
+
+		if (response.status === 200) return response.data as unknown as Card[];
+		throw new Error(`Could no retrieve a list of cards for the column ${this.id}. \n Octokit returned error ${response.status}.`);
+	}
 }
 
 export class Card {
 	/**
 	 * Move a project card
 	 * https://docs.github.com/en/rest/reference/projects#move-a-project-card
-	 * @param columnId
-	 * @param installationId
+	 * @param column
 	 */
-	public async MoveAsync(columnId: number, installationId: string): Promise<void> {
-		return await HttpClient.PostAsync(`/projects/columns/cards/${this.id}/moves`, {
-			column_id: columnId,
-			position: 'bottom'
-		}, installationId);
+	public async MoveAsync(column: Column): Promise<void> {
+		let response = await octokit.request('POST /projects/columns/cards/:card_id/moves', {
+			card_id: this.id,
+			position: 'bottom',
+			column_id: column.id,
+			mediaType: {
+				previews: [
+					'inertia'
+				]
+			}
+		});
+
+		if (response.status !== 201) throw new Error(`Could not move card ${this.id} to column "${column.name}".\n Octokit returned error ${response.status}.`);
 	}
 }
 
