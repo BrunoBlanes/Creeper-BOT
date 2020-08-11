@@ -1,9 +1,41 @@
 import { octokit } from '../Services/Octokit';
 import { User } from './User';
+import { Issue, Label } from './Issue';
 
 export class Project {
+	owner = () => {
+		let paths: string[] = this.owner_url.split('/');
+		return paths[paths.length - 2];
+	};
+
+	repo = () => {
+		let paths: string[] = this.owner_url.split('/');
+		return paths[paths.length - 1];
+	};
+
 	/**
-	 * List repository projects
+	 * Get a project.
+	 * https://docs.github.com/en/rest/reference/projects#get-a-project
+	 * @param id
+	 */
+	public static async GetAsync(id: number): Promise<Project> {
+		let response = await octokit.request('GET /projects/:project_id', {
+			project_id: id,
+			mediaType: {
+				previews: [
+					'inertia'
+				]
+			}
+		});
+
+		if (response.status === 200) return response.data as unknown as Project;
+		else if (response.status === 404) throw new Error('Projects are disabled for this repository.');
+		else if (response.status === 401 || response.status === 410) throw new Error('You do not have sufficient privileges to list projects for this repository.');
+		throw new Error(`Could not retrieve a list of projects the repository. \n Octokit returned error ${response.status}.`);
+	}
+
+	/**
+	 * List repository projects.
 	 * https://docs.github.com/en/rest/reference/projects#list-repository-projects
 	 * @param owner
 	 * @param repo
@@ -22,22 +54,20 @@ export class Project {
 
 		if (response.status === 200)
 			return response.data as unknown as Project[];
-		else if (response.status === 404)
-			throw new Error(`Projects are disabled in the repository "${repo}".`);
-		else if (response.status === 401 || response.status === 410)
-			throw new Error(`You do not have sufficient privileges to list projects for the repository "${repo}".`);
+		else if (response.status === 404) throw new Error(`Projects are disabled in the repository "${repo}".`);
+		else if (response.status === 401 || response.status === 410) throw new Error(`You do not have sufficient privileges to list projects for the repository "${repo}".`);
 		throw new Error(`Could not retrieve a list of projects for repository "${repo}" of owner "${owner}". \n Octokit returned error ${response.status}.`);
 	}
 
 	/**
-	 * Get the specified project column
+	 * Get the specified project column.  Returns the first column if not specified.
 	 * https://docs.github.com/en/rest/reference/projects#get-a-project-column
-	 *  @param index The column index. Returns the first column if not specified.
+	 *  @param index The column index.
 	 */
 	public async GetColumnAsync(index?: number): Promise<Column>;
 
 	/**
-	 * Get the specified project column
+	 * Get the specified project column.
 	 * https://docs.github.com/en/rest/reference/projects#get-a-project-column
 	 *  @param name The column name.
 	 */
@@ -85,7 +115,7 @@ export class Project {
 
 export class Column {
 	/**
-	 * List project cards
+	 * List project cards.
 	 * https://docs.github.com/en/rest/reference/projects#list-project-cards
 	 * @param state The column state.
 	 * Defaults to "not_archived" if no value is specified.
@@ -108,7 +138,7 @@ export class Column {
 
 export class Card {
 	/**
-	 * Move a project card
+	 * Move a project card.
 	 * https://docs.github.com/en/rest/reference/projects#move-a-project-card
 	 * @param column
 	 */
@@ -128,7 +158,7 @@ export class Card {
 	}
 
 	/**
-	 * Get a project column
+	 * Get a project column.
 	 * https://docs.github.com/en/rest/reference/projects#get-a-project-column
 	 */
 	public async GetColumnAsync(): Promise<Column> {
@@ -145,11 +175,35 @@ export class Card {
 		throw new Error(`Could not retrieve column information for card ${this.id}.\n Octokit returned error ${response.status}.`);
 	}
 
-	public async UpdateAssociatedContentAsync(): Promise<void> {
+	public async GetProjectAsync(): Promise<Project> {
+		let splitUrl: string[] = this.project_url.split('/');
+		let projectId: number = +splitUrl[splitUrl.length - 1];
+		return await Project.GetAsync(projectId);
+	}
+
+	/** Updates the associated issue when the card moves. */
+	public async UpdateIssueAsync(): Promise<void> {
 		let column: Column = await this.GetColumnAsync();
+		let project: Project = await this.GetProjectAsync();
+		let splitUrl: string[] = this.content_url.split('/');
+		let contentId: number = +splitUrl[splitUrl.length - 1];
+		let issue: Issue = await Issue.GetAsync(project.owner(), project.repo(), contentId);
 
 		// Moved to column 'Triage'
 		if (column.name === 'Triage') {
+			let label: Label;
+			let labels: string[];
+			if (!issue.labels.some(x => x.name === 'Triage')) labels.push('Triage');
+			if (label = issue.labels.find(x => x.name === 'Working'))
+				issue.labels.splice(issue.labels.indexOf(label), 1);
+			if (label = issue.labels.find(x => x.name === 'Awaiting Pull Request'))
+				issue.labels.splice(issue.labels.indexOf(label), 1);
+			if (label = issue.labels.find(x => x.name === 'Awaiting Pull Request'))
+				issue.labels.splice(issue.labels.indexOf(label), 1);
+			if (label = issue.labels.find(x => x.name === 'Awaiting Pull Request'))
+				issue.labels.splice(issue.labels.indexOf(label), 1);
+			issue.labels.forEach(x => { labels.push(x.name); });
+			await issue.UpdateLabelsAsync(labels);
 			// TODO: Add triage, remove working, fixed, complete, awaiting pr
 			// Remove pr association
 

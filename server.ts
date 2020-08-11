@@ -4,7 +4,6 @@ import { Card } from './GitHubApi/Project';
 import { Issue } from './GitHubApi/Issue';
 import * as HttpServer from 'http';
 
-const port = process.env.port || 1337
 Azure.SetPrivateSecret();
 
 HttpServer.createServer(function (req, res) {
@@ -32,20 +31,18 @@ HttpServer.createServer(function (req, res) {
 						// New issue opened event
 						if (event.action === 'opened') {
 
-							// Add the label 'Triage'
-							if (issue.labels.some(label => label.name === 'Bug')) {
-								await issue.AddLabelsAsync(['Triage']);
-							} else {
-
-								// If it isn't a bug, add the 'Task' label too
-								await issue.AddLabelsAsync(['Task', 'Triage']);
-							}
-
 							// Assign myself to this issue
 							await issue.AddAssigneesAsync(['BrunoBlanes']);
 
-							// Create a project card
-							await issue.CreateProjectCardAsync();
+							// No milestone set
+							if (!issue.milestone) {
+								await issue.AddLabelsAsync(['Triage']);
+							}
+
+							// Check if project label added to issue
+							if (issue.CanCreateProjectCard()) {
+								await issue.CreateProjectCardAsync();
+							}
 
 						// New label added event
 						} else if (event.action === 'labeled') {
@@ -55,10 +52,18 @@ HttpServer.createServer(function (req, res) {
 								await issue.MoveAssociatedCardAsync('Done');
 							}
 
-							// TODO: Check if maybe project cards should be created here
+							// Check if project label added to issue
+							if (issue.CanCreateProjectCard(event.label.name)) {
+								await issue.CreateProjectCardAsync();
+							}
+
+						// New label removed event
+						} else if (event.action === 'unlabeled') {
+							// TODO: Delete project card
+							// TODO: Remove milestone
 
 						// Issue closed event
-						} else if (event.action == 'closed') {
+						} else if (event.action === 'closed') {
 							await issue.UpdateClosedAsync();
 						}
 
@@ -153,4 +158,4 @@ HttpServer.createServer(function (req, res) {
 		res.write('<p>Creeper-Bot is a bot created by Bruno Blanes to automate his personal GitHub account.<p>You can find more about him at <a href="https://github.com/BrunoBlanes/Creeper-Bot/">https://github.com/BrunoBlanes/Creeper-Bot/</a>', 'text/html; charset=utf-8');
 		res.end();
 	}
-}).listen(port);
+}).listen(process.env.port || 1337);

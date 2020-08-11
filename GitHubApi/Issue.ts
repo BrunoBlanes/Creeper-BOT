@@ -14,7 +14,28 @@ export class Issue {
 	};
 
 	/**
-	 * Add labels to an issue
+	 * Get an issue.
+	 * https://docs.github.com/en/rest/reference/issues#get-an-issue
+	 * @param owner
+	 * @param repo
+	 * @param issue
+	 */
+	public static async GetAsync(owner: string, repo: string, number: number): Promise<Issue> {
+		let response = await octokit.request('GET /repos/:owner/:repo/issues/:issue_number', {
+			owner: owner,
+			repo: repo,
+			issue_number: number
+		});
+
+		if (response.status === 200) return response.data as unknown as Issue;
+		else if (response.status === 301) throw new Error(`The issue ${number} at repository "${repo}" was permanently moved to "${response.headers.location}".`);
+		else if (response.status === 404) throw new Error(`The issue ${number} might have been transfered to or deleted from a repository you do not have read access to.`);
+		else if (response.status === 410) throw new Error(`The issue ${number} has been permanently deleted from the repository "${repo}".`);
+		throw new Error(`Could not retrieve issue ${number} from repository "${repo}".\n Octokit returned error ${response.status}.`);
+	}
+
+	/**
+	 * Add labels to an issue.
 	 * https://docs.github.com/en/rest/reference/issues#add-labels-to-an-issue
 	 * @param labels
 	 */
@@ -31,7 +52,7 @@ export class Issue {
 	}
 
 	/**
-	 * Add assignees to an issue
+	 * Add assignees to an issue.
 	 * https://docs.github.com/en/rest/reference/issues#add-assignees-to-an-issue
 	 * @param assignees Usernames of people to assign this issue to.
 	 * 
@@ -73,12 +94,18 @@ export class Issue {
 	}
 
 	/**
-	 * Create a project card
+	 * Create a project card.
 	 * https://docs.github.com/en/rest/reference/projects#create-a-project-card
 	 */
 	public async CreateProjectCardAsync(): Promise<void> {
+		let columnId: number;
+
+		if (this.milestone)
+			columnId = (await (await this.GetProjectAsync()).GetColumnAsync(this.milestone.title)).id;
+		else
+			columnId = (await (await this.GetProjectAsync()).GetColumnAsync()).id;
 		let response = await octokit.request('POST /projects/columns/:column_id/cards', {
-			column_id: (await (await this.GetProjectAsync()).GetColumnAsync()).id,
+			column_id: columnId,
 			content_id: this.id,
 			content_type: 'Issue',
 			mediaType: {
@@ -87,13 +114,12 @@ export class Issue {
 				]
 			}
 		});
-
 		if (response.status !== 201) throw new Error(`Could not create card for issue ${this.id}.`);
 	}
 
 	/**
-	 * Move the project card associated with this issue to the specified column within the same project
-	 * @param columnName The name of a column within the current projectS
+	 * Move the project card associated with this issue to the specified column within the same project.
+	 * @param columnName The name of a column within the current project.
 	 */
 	public async MoveAssociatedCardAsync(columnName: string) {
 		let column: Column = await (await this.GetProjectAsync()).GetColumnAsync(columnName);
@@ -113,11 +139,11 @@ export class Issue {
 	}
 
 	/**
-	 * Update issue labels
+	 * Update issue labels.
 	 * https://docs.github.com/en/rest/reference/issues#update-an-issue
 	 * @param labels
 	 */
-	private async UpdateLabelsAsync(labels: string[]): Promise<void> {
+	public async UpdateLabelsAsync(labels: string[]): Promise<void> {
 		let response = await octokit.request('PATCH /repos/:owner/:repo/issues/:issue_number', {
 			owner: this.owner(),
 			repo: this.repo(),
@@ -128,21 +154,45 @@ export class Issue {
 		if (response.status !== 200) throw new Error(`Could not update labels for issue ${this.number} at "${this.repo()}".\n Octokit returned error ${response.status}.`);
 	}
 
-	/** Returns the project that matches the current project label */
+	/**
+	 * Check if there is a project label.
+	 * @param name
+	 */
+	public CanCreateProjectCard(name: string): boolean;
+	public CanCreateProjectCard(): boolean;
+	public CanCreateProjectCard(param?: any): boolean {
+		if (param && typeof param == 'string') {
+			if (param === 'Android' || param === 'iOS' || param === 'Server' || param === 'WebAssembly' || param === 'Windows') {
+				return true;
+			}
+		} else {
+			for (let label of this.labels) {
+				if (label.name === 'Android' || label.name === 'iOS' || label.name === 'Server' || label.name === 'WebAssembly' || label.name === 'Windows') {
+					return true;
+				}
+			}
+		}
+
+		return false;
+	}
+
+	/** Returns the project that matches the current project label. */
 	private async GetProjectAsync(): Promise<Project> {
 		let projects: Project[] = await Project.ListAsync(this.owner(), this.repo(), 'open');
 		let project: Project;
 
 		for (let label of this.labels) {
-			project = projects.filter(x => x.name == label.name)[0];
+			project = projects.filter(x => x.name === label.name)[0];
 
 			if (project) {
 				return project;
 			}
 		}
+
+		throw new Error(`Could not find any project label associated with issue ${this.number} on repository "${this.repo()}".`);
 	}
 
-	/** Returns the current project column where this issue's card is */
+	/** Returns the current project column where this issue's card is. */
 	private async GetCurrentColumnAsync(): Promise<Column> {
 		let columnName: string;
 
@@ -200,14 +250,14 @@ export interface Issue {
 	title: string;
 	body: string;
 	user: User;
-	labels: Label[];
-	assignee: User;
-	assignees: User[];
-	milestone: Milestone;
+	labels?: Label[];
+	assignee?: User;
+	assignees?: User[];
+	milestone?: Milestone;
 	locked: boolean;
 	active_lock_reason: string;
 	comments: number;
-	pull_request: PullRequest;
+	pull_request?: PullRequest;
 	closed_at: Date;
 	created_at: Date;
 	updated_at: Date;
