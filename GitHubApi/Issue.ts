@@ -93,6 +93,26 @@ export class Issue {
 		} else console.warn(`Assignees list was empty, skipping adding assignees to issue ${this.number}.`);
 	}
 
+	/** Returns the project that matches the current project label. */
+	public async GetProjectAsync(): Promise<Project> {
+		let projects: Project[] = await Project.ListAsync(this.owner(), this.repo());
+		let project: Project;
+
+		for (let label of this.labels) {
+			if (project = projects.find(x => x.name === label.name)) {
+				return project;
+			}
+		}
+
+		throw new Error(`Could not find any project label associated with issue ${this.number} on repository "${this.repo()}".`);
+	}
+
+	/** Check if a label with a project name was set */
+	public async IsProjectLabelSetAsync(): Promise<boolean> {
+		try { if (await this.GetProjectAsync()) return true; }
+		catch { return false; }
+	}
+
 	/**
 	 * Create a project card.
 	 * https://docs.github.com/en/rest/reference/projects#create-a-project-card
@@ -117,104 +137,33 @@ export class Issue {
 		if (response.status !== 201) throw new Error(`Could not create card for issue ${this.id}.`);
 	}
 
-	/**
-	 * Move the project card associated with this issue to the specified column within the same project.
-	 * @param columnName The name of a column within the current project.
-	 */
-	public async MoveAssociatedCardAsync(columnName: string) {
-		let column: Column = await (await this.GetProjectAsync()).GetColumnAsync(columnName);
-		await (await this.GetProjectCardAsync()).MoveAsync(column);
-	}
-
-	/** Updates labels of closed issue */
-	public async UpdateClosedAsync(): Promise<void> {
-		let label: Label;
-		let labels: string[];
-		if (this.labels.some(x => x.name === 'Bug')) labels.push('Fixed');
-		else if (this.labels.some(x => x.name === 'Task')) labels.push('Complete');
-		if (label = this.labels.find(x => x.name === 'Awaiting Pull Request'))
-			this.labels.splice(this.labels.indexOf(label), 1);
-		this.labels.forEach(x => { labels.push(x.name); });
-		await this.UpdateLabelsAsync(labels);
-	}
-
-	/**
-	 * Update issue labels.
-	 * https://docs.github.com/en/rest/reference/issues#update-an-issue
-	 * @param labels
-	 */
-	public async UpdateLabelsAsync(labels: string[]): Promise<void> {
-		let response = await octokit.request('PATCH /repos/:owner/:repo/issues/:issue_number', {
-			owner: this.owner(),
-			repo: this.repo(),
-			issue_number: this.number,
-			labels: labels
-		});
-
-		if (response.status !== 200) throw new Error(`Could not update labels for issue ${this.number} at "${this.repo()}".\n Octokit returned error ${response.status}.`);
-	}
-
-	/**
-	 * Check if there is a project label.
-	 * @param name
-	 */
-	public CanCreateProjectCard(name: string): boolean;
-	public CanCreateProjectCard(): boolean;
-	public CanCreateProjectCard(param?: any): boolean {
-		if (param && typeof param == 'string') {
-			if (param === 'Android' || param === 'iOS' || param === 'Server' || param === 'WebAssembly' || param === 'Windows') {
-				return true;
-			}
-		} else {
-			for (let label of this.labels) {
-				if (label.name === 'Android' || label.name === 'iOS' || label.name === 'Server' || label.name === 'WebAssembly' || label.name === 'Windows') {
-					return true;
-				}
-			}
-		}
-
-		return false;
-	}
-
-	/** Returns the project that matches the current project label. */
-	private async GetProjectAsync(): Promise<Project> {
-		let projects: Project[] = await Project.ListAsync(this.owner(), this.repo(), 'open');
-		let project: Project;
-
-		for (let label of this.labels) {
-			project = projects.filter(x => x.name === label.name)[0];
-
-			if (project) {
-				return project;
-			}
-		}
-
-		throw new Error(`Could not find any project label associated with issue ${this.number} on repository "${this.repo()}".`);
-	}
-
-	/** Returns the current project column where this issue's card is. */
-	private async GetCurrentColumnAsync(): Promise<Column> {
+	public async GetProjectCardAsync(): Promise<Card> {
 		let columnName: string;
 
 		for (let label of this.labels) {
 			if (label.name === 'Triage') {
 				columnName = 'Triage';
 				break;
-			} else if (label.name === 'Working') {
+			}
+
+			else if (label.name === 'Working') {
 				columnName = 'In progress';
 				break;
-			} else if (label.name === 'Complete' || label.name === 'Fixed') {
+			}
+
+			else if (label.name === 'Complete' || label.name === 'Fixed' || label.name === 'Awaiting PR') {
 				columnName = 'Done';
 				break;
 			}
 		}
 
-		columnName = this.milestone.title;
-		return await (await this.GetProjectAsync()).GetColumnAsync(columnName);
-	}
+		if (!columnName) {
+			columnName = this.milestone.title;
+		}
 
-	private async GetProjectCardAsync(): Promise<Card> {
-		let cards: Card[] = await (await this.GetCurrentColumnAsync()).ListCardsAsync();
+		let project: Project = await this.GetProjectAsync();
+		let column: Column = await project.GetColumnAsync(columnName);
+		let cards: Card[] = await column.ListCardsAsync();
 
 		for (let card of cards) {
 			if (card.content_url === this.url) {
@@ -223,6 +172,25 @@ export class Issue {
 		}
 
 		throw new Error(`Could not locate a card associated with issue ${this.id}.`);
+	}
+
+	/**
+	 * Update issue labels.
+	 * https://docs.github.com/en/rest/reference/issues#update-an-issue
+	 * @param labels An array of label names to replace current labels.
+	 * @param milestone The number of the milestone to be added to this issue.
+	 * Set to -1 to remove the current milestone. If ommited, it stays unchanged.
+	 */
+	public async UpdateAsync(labels: string[], milestone: number = 0): Promise<void> {
+		let response = await octokit.request('PATCH /repos/:owner/:repo/issues/:issue_number', {
+			owner: this.owner(),
+			repo: this.repo(),
+			issue_number: this.number,
+			milestone: milestone === 0 ? this.milestone.number : milestone === -1 ? null : milestone,
+			labels: labels
+		});
+
+		if (response.status !== 200) throw new Error(`Could not update labels for issue ${this.number} at "${this.repo()}".\n Octokit returned error ${response.status}.`);
 	}
 }
 

@@ -1,7 +1,7 @@
 import { Azure, Validator } from './Services/Azure';
+import { Issue, Label } from './GitHubApi/Issue';
 import { Payload } from './GitHubApi/Webhook';
 import { Card } from './GitHubApi/Project';
-import { Issue } from './GitHubApi/Issue';
 import * as HttpServer from 'http';
 
 Azure.SetPrivateSecret();
@@ -31,7 +31,7 @@ HttpServer.createServer(function (req, res) {
 						// New issue opened event
 						if (event.action === 'opened') {
 
-							// Assign myself to this issue
+							// Add myself as assignee
 							await issue.AddAssigneesAsync(['BrunoBlanes']);
 
 							// No milestone set
@@ -40,35 +40,50 @@ HttpServer.createServer(function (req, res) {
 							}
 
 							// Check if project label added to issue
-							if (issue.CanCreateProjectCard()) {
+							if (await issue.IsProjectLabelSetAsync()) {
 								await issue.CreateProjectCardAsync();
 							}
-
-						// New label added event
-						} else if (event.action === 'labeled') {
-
-							// Added the 'Awaiting Pull Request' label
-							if (event.label.name === 'Awaiting Pull Request') {
-								await issue.MoveAssociatedCardAsync('Done');
-							}
-
-							// Check if project label added to issue
-							if (issue.CanCreateProjectCard(event.label.name)) {
-								await issue.CreateProjectCardAsync();
-							}
-
-						// New label removed event
-						} else if (event.action === 'unlabeled') {
-							// TODO: Delete project card
-							// TODO: Remove milestone
-
-						// Issue closed event
-						} else if (event.action === 'closed') {
-							await issue.UpdateClosedAsync();
 						}
 
+						// New label added event
+						else if (event.action === 'labeled') {
+
+							// Check if project label added to issue
+							if (await issue.IsProjectLabelSetAsync()) {
+								await issue.CreateProjectCardAsync();
+							}
+						}
+
+						// New label removed event
+						else if (event.action === 'unlabeled') {
+
+							// Project label removed
+							if (await issue.IsProjectLabelSetAsync() === false) {
+								let labels: string[];
+								labels.push('Triage');
+								issue.labels.forEach(x => { labels.push(x.name); });
+								let card: Card = await issue.GetProjectCardAsync();
+								await card.DeleteAsync();
+								await issue.UpdateAsync(labels, -1);
+							}
+						}
+
+						// Issue closed event
+						else if (event.action === 'closed') {
+							let label: Label;
+							let labels: string[];
+							if (issue.labels.some(x => x.name === 'Bug')) labels.push('Fixed');
+							else labels.push('Complete');
+							if (label = issue.labels.find(x => x.name === 'Awaiting PR'))
+								issue.labels.splice(issue.labels.indexOf(label), 1);
+							issue.labels.forEach(x => { labels.push(x.name); });
+							await issue.UpdateAsync(labels);
+						}
+					}
+
 					// Handle project cards events
-					} else if (req.rawHeaders['x-github-event'] === 'project_card') {
+					// https://docs.github.com/en/developers/webhooks-and-events/webhook-events-and-payloads#project_card
+					else if (req.rawHeaders['x-github-event'] === 'project_card') {
 						let card: Card = event.project_card;
 
 						// Card is not a note
@@ -76,7 +91,11 @@ HttpServer.createServer(function (req, res) {
 
 							// Card moved event
 							if (event.action === 'moved') {
-								await card.UpdateAssociatedContentAsync();
+
+								// Content is an issue
+								if (card.IsContentAnIssue()) {
+									await card.UpdateIssueAsync();
+								}
 							}
 						}
 

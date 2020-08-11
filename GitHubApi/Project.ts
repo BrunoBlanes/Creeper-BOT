@@ -39,8 +39,9 @@ export class Project {
 	 * https://docs.github.com/en/rest/reference/projects#list-repository-projects
 	 * @param owner
 	 * @param repo
+	 * @param state
 	 */
-	public static async ListAsync(owner: string, repo: string, state?: 'open' | 'closed' | 'all'): Promise<Project[]> {
+	public static async ListAsync(owner: string, repo: string, state: 'open' | 'closed' | 'all' = 'open'): Promise<Project[]> {
 		let response = await octokit.request('GET /repos/:owner/:repo/projects', {
 			owner: owner,
 			repo: repo,
@@ -120,10 +121,10 @@ export class Column {
 	 * @param state The column state.
 	 * Defaults to "not_archived" if no value is specified.
 	 */
-	public async ListCardsAsync(state?: 'all' | 'archived' | 'not_archived'): Promise<Card[]> {
+	public async ListCardsAsync(state: 'all' | 'archived' | 'not_archived' = 'not_archived'): Promise<Card[]> {
 		let response = await octokit.request('GET /projects/columns/:column_id/cards', {
 			column_id: this.id,
-			archived_state: state ?? 'not_archived',
+			archived_state: state,
 			mediaType: {
 				previews: [
 					'inertia'
@@ -158,6 +159,23 @@ export class Card {
 	}
 
 	/**
+	 * Delete a project card.
+	 * https://docs.github.com/en/rest/reference/projects#delete-a-project-card
+	 */
+	public async DeleteAsync(): Promise<void> {
+		let response = await octokit.request('DELETE /projects/columns/cards/:card_id', {
+			card_id: this.id,
+			mediaType: {
+				previews: [
+					'inertia'
+				]
+			}
+		});
+
+		if (response.status !== 204) throw new Error(`Could not delete project card ${this.id}.\n Octokit returned error ${response.status}.`);
+	}
+
+	/**
 	 * Get a project column.
 	 * https://docs.github.com/en/rest/reference/projects#get-a-project-column
 	 */
@@ -175,14 +193,24 @@ export class Card {
 		throw new Error(`Could not retrieve column information for card ${this.id}.\n Octokit returned error ${response.status}.`);
 	}
 
+	/** Get the project where this card is in. */
 	public async GetProjectAsync(): Promise<Project> {
 		let splitUrl: string[] = this.project_url.split('/');
 		let projectId: number = +splitUrl[splitUrl.length - 1];
 		return await Project.GetAsync(projectId);
 	}
 
+	/** Check if card content is an issue. */
+	public IsContentAnIssue(): boolean {
+		let splitUrl: string[] = this.content_url.split('/');
+		if (splitUrl[splitUrl.length - 2] === 'Issues') return true;
+		else return false;
+	}
+
 	/** Updates the associated issue when the card moves. */
 	public async UpdateIssueAsync(): Promise<void> {
+		let label: Label;
+		let labels: string[];
 		let column: Column = await this.GetColumnAsync();
 		let project: Project = await this.GetProjectAsync();
 		let splitUrl: string[] = this.content_url.split('/');
@@ -191,36 +219,69 @@ export class Card {
 
 		// Moved to column 'Triage'
 		if (column.name === 'Triage') {
-			let label: Label;
-			let labels: string[];
-			if (!issue.labels.some(x => x.name === 'Triage')) labels.push('Triage');
+			if (!issue.labels.some(x => x.name === 'Triage'))
+				labels.push('Triage');
 			if (label = issue.labels.find(x => x.name === 'Working'))
 				issue.labels.splice(issue.labels.indexOf(label), 1);
-			if (label = issue.labels.find(x => x.name === 'Awaiting Pull Request'))
+			if (label = issue.labels.find(x => x.name === 'Fixed'))
 				issue.labels.splice(issue.labels.indexOf(label), 1);
-			if (label = issue.labels.find(x => x.name === 'Awaiting Pull Request'))
+			if (label = issue.labels.find(x => x.name === 'Complete'))
 				issue.labels.splice(issue.labels.indexOf(label), 1);
-			if (label = issue.labels.find(x => x.name === 'Awaiting Pull Request'))
+			if (label = issue.labels.find(x => x.name === 'Awaiting PR'))
 				issue.labels.splice(issue.labels.indexOf(label), 1);
 			issue.labels.forEach(x => { labels.push(x.name); });
-			await issue.UpdateLabelsAsync(labels);
-			// TODO: Add triage, remove working, fixed, complete, awaiting pr
-			// Remove pr association
+			await issue.UpdateAsync(labels, -1);
+			// TODO: Remove PR association
+		}
 
 		// Moved to column 'In progress'
-		} else if (column.name === 'In progress') {
-			// TODO: Add working, remove triage, fixed, complete, awaiting pr
-			// Remove pr association
+		else if (column.name === 'In progress') {
+			if (!issue.labels.some(x => x.name === 'Working'))
+				labels.push('Working');
+			if (label = issue.labels.find(x => x.name === 'Triage'))
+				issue.labels.splice(issue.labels.indexOf(label), 1);
+			if (label = issue.labels.find(x => x.name === 'Fixed'))
+				issue.labels.splice(issue.labels.indexOf(label), 1);
+			if (label = issue.labels.find(x => x.name === 'Complete'))
+				issue.labels.splice(issue.labels.indexOf(label), 1);
+			if (label = issue.labels.find(x => x.name === 'Awaiting PR'))
+				issue.labels.splice(issue.labels.indexOf(label), 1);
+			issue.labels.forEach(x => { labels.push(x.name); });
+			await issue.UpdateAsync(labels);
+			// TODO: Remove PR association
+		}
 
 		// Moved to column 'Done'
-		} else if (column.name === 'Done') {
-			// TODO: Add awaiting pr and fixed or complete, remove triage and working
-			// Add pr association
+		else if (column.name === 'Done') {
+			if (!issue.labels.some(x => x.name === 'Awaiting PR'))
+				labels.push('Awaiting PR');
+			if (label = issue.labels.find(x => x.name === 'Triage'))
+				issue.labels.splice(issue.labels.indexOf(label), 1);
+			if (label = issue.labels.find(x => x.name === 'Working'))
+				issue.labels.splice(issue.labels.indexOf(label), 1);
+			if (label = issue.labels.find(x => x.name === 'Fixed'))
+				issue.labels.splice(issue.labels.indexOf(label), 1);
+			if (label = issue.labels.find(x => x.name === 'Complete'))
+				issue.labels.splice(issue.labels.indexOf(label), 1);
+			issue.labels.forEach(x => { labels.push(x.name); });
+			await issue.UpdateAsync(labels);
+		}
 
 		// Moved to a milestone column
-		} else {
-			// TODO: Add milestone to isse, remove triage, working, fixed, complete, awaiting pr
-			// Remove pr association
+		else {
+			if (label = issue.labels.find(x => x.name === 'Triage'))
+				issue.labels.splice(issue.labels.indexOf(label), 1);
+			if (label = issue.labels.find(x => x.name === 'Working'))
+				issue.labels.splice(issue.labels.indexOf(label), 1);
+			if (label = issue.labels.find(x => x.name === 'Fixed'))
+				issue.labels.splice(issue.labels.indexOf(label), 1);
+			if (label = issue.labels.find(x => x.name === 'Complete'))
+				issue.labels.splice(issue.labels.indexOf(label), 1);
+			if (label = issue.labels.find(x => x.name === 'Awaiting PR'))
+				issue.labels.splice(issue.labels.indexOf(label), 1);
+			issue.labels.forEach(x => { labels.push(x.name); });
+			await issue.UpdateAsync(labels);
+			// TODO: Remove PR association
 		}
 	}
 }
