@@ -1,4 +1,5 @@
 import { Azure, Validator } from './Services/Azure';
+import { Milestone } from './GitHubApi/Milestone';
 import { Issue, Label } from './GitHubApi/Issue';
 import { Payload } from './GitHubApi/Webhook';
 import { Card } from './GitHubApi/Project';
@@ -19,9 +20,11 @@ HttpServer.createServer(function (req, res) {
 
 				// Parse as json
 				let event: Payload = JSON.parse(body);
+				let repo: string = event.repository.name;
+				let owner: string = event.repository.owner.login;
 
 				// Event is related to the 'Average CRM' repo
-				if (event.repository.name === 'Average CRM') {
+				if (repo === 'Average CRM') {
 
 					// Handle issue events
 					// https://docs.github.com/en/developers/webhooks-and-events/webhook-events-and-payloads#issues
@@ -32,16 +35,16 @@ HttpServer.createServer(function (req, res) {
 						if (event.action === 'opened') {
 
 							// Add myself as assignee
-							await issue.AddAssigneesAsync(['BrunoBlanes']);
+							await issue.AddAssigneesAsync(owner, repo, ['BrunoBlanes']);
 
 							// No milestone set
 							if (!issue.milestone) {
-								await issue.AddLabelsAsync(['Triage']);
+								await issue.AddLabelsAsync(owner, repo, ['Triage']);
 							}
 
 							// Check if project label added to issue
-							if (await issue.IsProjectLabelSetAsync()) {
-								await issue.CreateProjectCardAsync();
+							if (await issue.IsProjectLabelSetAsync(owner, repo)) {
+								await issue.CreateProjectCardAsync(owner, repo);
 							}
 						}
 
@@ -49,8 +52,8 @@ HttpServer.createServer(function (req, res) {
 						else if (event.action === 'labeled') {
 
 							// Check if project label added to issue
-							if (await issue.IsProjectLabelSetAsync()) {
-								await issue.CreateProjectCardAsync();
+							if (await issue.IsProjectLabelSetAsync(owner, repo)) {
+								await issue.CreateProjectCardAsync(owner, repo);
 							}
 						}
 
@@ -58,13 +61,13 @@ HttpServer.createServer(function (req, res) {
 						else if (event.action === 'unlabeled') {
 
 							// Project label removed
-							if (await issue.IsProjectLabelSetAsync() === false) {
+							if (await issue.IsProjectLabelSetAsync(owner, repo) === false) {
 								let labels: string[];
 								labels.push('Triage');
 								issue.labels.forEach(x => { labels.push(x.name); });
-								let card: Card = await issue.GetProjectCardAsync();
+								let card: Card = await issue.GetProjectCardAsync(owner, repo);
 								await card.DeleteAsync();
-								await issue.UpdateAsync(labels, -1);
+								await issue.UpdateAsync(owner, repo, labels, -1);
 							}
 						}
 
@@ -77,7 +80,7 @@ HttpServer.createServer(function (req, res) {
 							if (label = issue.labels.find(x => x.name === 'Awaiting PR'))
 								issue.labels.splice(issue.labels.indexOf(label), 1);
 							issue.labels.forEach(x => { labels.push(x.name); });
-							await issue.UpdateAsync(labels);
+							await issue.UpdateAsync(owner, repo, labels);
 						}
 					}
 
@@ -94,7 +97,93 @@ HttpServer.createServer(function (req, res) {
 
 								// Content is an issue
 								if (card.IsContentAnIssue()) {
-									await card.UpdateIssueAsync();
+									let labels: string[];
+									let issue: Issue = await event.repository.GetIssueAsync(card.GetContentId());
+									let columnName: string = (await card.GetColumnAsync()).name;
+
+									if (columnName === 'Triage') {
+										issue.labels.forEach(label => {
+											if (label.name === 'Working'
+												|| label.name === 'Fixed'
+												|| label.name === 'Complete'
+												|| label.name === 'Awaiting PR') {
+												issue.labels.splice(issue.labels.indexOf(label), 1);
+											} else {
+												labels.push(label.name);
+											}
+										});
+
+										if (!issue.labels.some(x => x.name === 'Triage'))
+											labels.push('Triage');
+										await issue.UpdateAsync(owner, repo, labels, -1);
+
+										// TODO: Remove PR association
+									}
+
+									else if (columnName === 'In progress') {
+										issue.labels.forEach(label => {
+											if (label.name === 'Triage'
+												|| label.name === 'Fixed'
+												|| label.name === 'Complete'
+												|| label.name === 'Awaiting PR') {
+												issue.labels.splice(issue.labels.indexOf(label), 1);
+											} else {
+												labels.push(label.name);
+											}
+										});
+
+										if (!issue.labels.some(x => x.name === 'Working'))
+											labels.push('Working');
+										await issue.UpdateAsync(owner, repo, labels);
+
+										// TODO: Remove PR association
+									}
+
+									else if (columnName === 'Done') {
+										issue.labels.forEach(label => {
+											if (label.name === 'Triage'
+												|| label.name === 'Working'
+												|| label.name === 'Fixed'
+												|| label.name === 'Complete') {
+												issue.labels.splice(issue.labels.indexOf(label), 1);
+											} else {
+												labels.push(label.name);
+											}
+										});
+
+										if (!issue.labels.some(x => x.name === 'Awaiting PR'))
+											labels.push('Awaiting PR');
+										await issue.UpdateAsync(owner, repo, labels);
+									}
+
+									else {
+										issue.labels.forEach(label => {
+											if (label.name === 'Triage'
+												|| label.name === 'Working'
+												|| label.name === 'Fixed'
+												|| label.name === 'Complete'
+												|| label.name === 'Awaiting PR') {
+												issue.labels.splice(issue.labels.indexOf(label), 1);
+											} else {
+												labels.push(label.name);
+											}
+										});
+
+										let milestones: Milestone[] = await event.repository.ListMilestonesAsync();
+
+										for (let milestone of milestones) {
+											if (milestone.title === columnName) {
+												await issue.UpdateAsync(owner, repo, labels, milestone.id);
+												break;
+											}
+
+											else if (milestones.indexOf(milestone) === milestones.length - 1) {
+												await issue.UpdateAsync(owner, repo, labels, -1);
+											}
+										}
+
+										// TODO: Remove PR association
+									}
 								}
 							}
 						}

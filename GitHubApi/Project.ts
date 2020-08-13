@@ -1,18 +1,7 @@
 import { octokit } from '../Services/Octokit';
 import { User } from './User';
-import { Issue, Label } from './Issue';
 
 export class Project {
-	owner = () => {
-		let paths: string[] = this.owner_url.split('/');
-		return paths[paths.length - 2];
-	};
-
-	repo = () => {
-		let paths: string[] = this.owner_url.split('/');
-		return paths[paths.length - 1];
-	};
-
 	/**
 	 * Get a project.
 	 * https://docs.github.com/en/rest/reference/projects#get-a-project
@@ -207,82 +196,10 @@ export class Card {
 		else return false;
 	}
 
-	/** Updates the associated issue when the card moves. */
-	public async UpdateIssueAsync(): Promise<void> {
-		let label: Label;
-		let labels: string[];
-		let column: Column = await this.GetColumnAsync();
-		let project: Project = await this.GetProjectAsync();
+	/** Return the associated content id*/
+	public GetContentId(): number {
 		let splitUrl: string[] = this.content_url.split('/');
-		let contentId: number = +splitUrl[splitUrl.length - 1];
-		let issue: Issue = await Issue.GetAsync(project.owner(), project.repo(), contentId);
-
-		// Moved to column 'Triage'
-		if (column.name === 'Triage') {
-			if (!issue.labels.some(x => x.name === 'Triage'))
-				labels.push('Triage');
-			if (label = issue.labels.find(x => x.name === 'Working'))
-				issue.labels.splice(issue.labels.indexOf(label), 1);
-			if (label = issue.labels.find(x => x.name === 'Fixed'))
-				issue.labels.splice(issue.labels.indexOf(label), 1);
-			if (label = issue.labels.find(x => x.name === 'Complete'))
-				issue.labels.splice(issue.labels.indexOf(label), 1);
-			if (label = issue.labels.find(x => x.name === 'Awaiting PR'))
-				issue.labels.splice(issue.labels.indexOf(label), 1);
-			issue.labels.forEach(x => { labels.push(x.name); });
-			await issue.UpdateAsync(labels, -1);
-			// TODO: Remove PR association
-		}
-
-		// Moved to column 'In progress'
-		else if (column.name === 'In progress') {
-			if (!issue.labels.some(x => x.name === 'Working'))
-				labels.push('Working');
-			if (label = issue.labels.find(x => x.name === 'Triage'))
-				issue.labels.splice(issue.labels.indexOf(label), 1);
-			if (label = issue.labels.find(x => x.name === 'Fixed'))
-				issue.labels.splice(issue.labels.indexOf(label), 1);
-			if (label = issue.labels.find(x => x.name === 'Complete'))
-				issue.labels.splice(issue.labels.indexOf(label), 1);
-			if (label = issue.labels.find(x => x.name === 'Awaiting PR'))
-				issue.labels.splice(issue.labels.indexOf(label), 1);
-			issue.labels.forEach(x => { labels.push(x.name); });
-			await issue.UpdateAsync(labels);
-			// TODO: Remove PR association
-		}
-
-		// Moved to column 'Done'
-		else if (column.name === 'Done') {
-			if (!issue.labels.some(x => x.name === 'Awaiting PR'))
-				labels.push('Awaiting PR');
-			if (label = issue.labels.find(x => x.name === 'Triage'))
-				issue.labels.splice(issue.labels.indexOf(label), 1);
-			if (label = issue.labels.find(x => x.name === 'Working'))
-				issue.labels.splice(issue.labels.indexOf(label), 1);
-			if (label = issue.labels.find(x => x.name === 'Fixed'))
-				issue.labels.splice(issue.labels.indexOf(label), 1);
-			if (label = issue.labels.find(x => x.name === 'Complete'))
-				issue.labels.splice(issue.labels.indexOf(label), 1);
-			issue.labels.forEach(x => { labels.push(x.name); });
-			await issue.UpdateAsync(labels);
-		}
-
-		// Moved to a milestone column
-		else {
-			if (label = issue.labels.find(x => x.name === 'Triage'))
-				issue.labels.splice(issue.labels.indexOf(label), 1);
-			if (label = issue.labels.find(x => x.name === 'Working'))
-				issue.labels.splice(issue.labels.indexOf(label), 1);
-			if (label = issue.labels.find(x => x.name === 'Fixed'))
-				issue.labels.splice(issue.labels.indexOf(label), 1);
-			if (label = issue.labels.find(x => x.name === 'Complete'))
-				issue.labels.splice(issue.labels.indexOf(label), 1);
-			if (label = issue.labels.find(x => x.name === 'Awaiting PR'))
-				issue.labels.splice(issue.labels.indexOf(label), 1);
-			issue.labels.forEach(x => { labels.push(x.name); });
-			await issue.UpdateAsync(labels);
-			// TODO: Remove PR association
-		}
+		return +splitUrl[splitUrl.length - 1];
 	}
 }
 

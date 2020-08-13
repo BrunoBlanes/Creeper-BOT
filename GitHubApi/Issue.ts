@@ -1,18 +1,9 @@
 import { Project, Column, Card } from './Project';
 import { octokit } from '../Services/Octokit';
+import { Milestone } from './Milestone';
 import { User } from './User';
 
 export class Issue {
-	owner = () => {
-		let paths: string[] = this.repository_url.split('/');
-		return paths[paths.length - 2];
-	};
-
-	repo = () => {
-		let paths: string[] = this.repository_url.split('/');
-		return paths[paths.length - 1];
-	};
-
 	/**
 	 * Get an issue.
 	 * https://docs.github.com/en/rest/reference/issues#get-an-issue
@@ -37,93 +28,109 @@ export class Issue {
 	/**
 	 * Add labels to an issue.
 	 * https://docs.github.com/en/rest/reference/issues#add-labels-to-an-issue
+	 * @param owner
+	 * @param repo
 	 * @param labels
 	 */
-	public async AddLabelsAsync(labels: Array<string>): Promise<void> {
+	public async AddLabelsAsync(owner: string, repo: string, labels: Array<string>): Promise<void> {
 		let response = await octokit.request('POST /repos/:owner/:repo/issues/:issue_number/labels', {
-			owner: this.owner(),
-			repo: this.repo(),
+			owner: owner,
+			repo: repo,
 			issue_number: this.number,
 			labels: labels
 		});
 
 		if (response.status === 200) this.labels = response.data;
-		throw new Error(`Could not assign list of labels to issue number ${this.number} of repository "${this.repo()}".\n Octokit returned error ${response.status}.`);
+		throw new Error(`Could not assign list of labels to issue number ${this.number} of repository "${repo}".\n Octokit returned error ${response.status}.`);
 	}
 
 	/**
 	 * Add assignees to an issue.
 	 * https://docs.github.com/en/rest/reference/issues#add-assignees-to-an-issue
+	 * @param owner
+	 * @param repo
 	 * @param assignees Usernames of people to assign this issue to.
 	 * 
 	 * NOTE: Only users with push access can add assignees to an issue. Assignees are silently ignored otherwise.
 	*/
-	public async AddAssigneesAsync(assignees: Array<string>): Promise<void> {
+	public async AddAssigneesAsync(owner: string, repo: string, assignees: Array<string>): Promise<void> {
 		if (assignees.length > 10) throw new Error('Maximum assignees allowed is 10.');
 		else {
 			assignees.forEach(async (assignee: string) => {
 				let response = await octokit.request('GET /repos/:owner/:repo/assignees/:assignee', {
-					owner: this.owner(),
-					repo: this.repo(),
+					owner: owner,
+					repo: repo,
 					assignee: assignee
 				});
 
 				if (response.status === 404) {
 					assignees.splice(assignees.indexOf(assignee), 1);
-					console.warn(`User "${assignee}" does not have permission to be assigned to issue ${this.number} of repository "${this.repo()}".`);
+					console.warn(`User "${assignee}" does not have permission to be assigned to issue ${this.number} of repository "${repo}".`);
 				}
 
 				else if (response.status !== 204) {
 					assignees.splice(assignees.indexOf(assignee), 1);
-					console.error(`Could not check if user "${assignee}" has permission to be assigned to issue ${this.number} of repository "${this.repo()}".\n Octokit returned error ${response.status}.`);
+					console.error(`Could not check if user "${assignee}" has permission to be assigned to issue ${this.number} of repository "${repo}".\n Octokit returned error ${response.status}.`);
 				}
 			});
 		}
 
 		if (assignees.length > 0) {
 			let response = await octokit.request('POST /repos/:owner/:repo/issues/:issue_number/assignees', {
-				owner: this.owner(),
-				repo: this.repo(),
+				owner: owner,
+				repo: repo,
 				issue_number: this.number,
 				assignees: assignees
 			});
 
 			if (response.status === 201) this.assignees = response.data.assignees;
-			else throw new Error(`Could not add assignees to issue ${this.number} of repository "${this.repo()}".\n Octokit returned error ${response.status}.`);
+			else throw new Error(`Could not add assignees to issue ${this.number} of repository "${repo}".\n Octokit returned error ${response.status}.`);
 		} else console.warn(`Assignees list was empty, skipping adding assignees to issue ${this.number}.`);
 	}
 
-	/** Returns the project that matches the current project label. */
-	public async GetProjectAsync(): Promise<Project> {
-		let projects: Project[] = await Project.ListAsync(this.owner(), this.repo());
+	/** 
+	 *  Returns the project that matches the current project label.
+	 * @param owner
+	 * @param repo
+	 */
+	public async GetProjectAsync(owner: string, repo: string): Promise<Project> {
+		if (this.project) return this.project;
+		let projects: Project[] = await Project.ListAsync(owner, repo);
 		let project: Project;
 
 		for (let label of this.labels) {
 			if (project = projects.find(x => x.name === label.name)) {
-				return project;
+				this.project = project;
+				return this.project;
 			}
 		}
 
-		throw new Error(`Could not find any project label associated with issue ${this.number} on repository "${this.repo()}".`);
+		throw new Error(`Could not find any project label associated with issue ${this.number} on repository "${repo}".`);
 	}
 
-	/** Check if a label with a project name was set */
-	public async IsProjectLabelSetAsync(): Promise<boolean> {
-		try { if (await this.GetProjectAsync()) return true; }
+	/**
+	 * Check if a label with a project name was set
+	 * @param owner
+	 * @param repo
+	 */
+	public async IsProjectLabelSetAsync(owner: string, repo: string): Promise<boolean> {
+		try { if (await this.GetProjectAsync(owner, repo)) return true; }
 		catch { return false; }
 	}
 
 	/**
 	 * Create a project card.
 	 * https://docs.github.com/en/rest/reference/projects#create-a-project-card
+	 * @param owner
+	 * @param repo
 	 */
-	public async CreateProjectCardAsync(): Promise<void> {
+	public async CreateProjectCardAsync(owner: string, repo: string): Promise<void> {
 		let columnId: number;
 
 		if (this.milestone)
-			columnId = (await (await this.GetProjectAsync()).GetColumnAsync(this.milestone.title)).id;
+			columnId = (await (await this.GetProjectAsync(owner, repo)).GetColumnAsync(this.milestone.title)).id;
 		else
-			columnId = (await (await this.GetProjectAsync()).GetColumnAsync()).id;
+			columnId = (await (await this.GetProjectAsync(owner, repo)).GetColumnAsync()).id;
 		let response = await octokit.request('POST /projects/columns/:column_id/cards', {
 			column_id: columnId,
 			content_id: this.id,
@@ -137,7 +144,12 @@ export class Issue {
 		if (response.status !== 201) throw new Error(`Could not create card for issue ${this.id}.`);
 	}
 
-	public async GetProjectCardAsync(): Promise<Card> {
+	/**
+	 * Get the associated project card.
+	 * @param owner
+	 * @param repo
+	 */
+	public async GetProjectCardAsync(owner: string, repo: string): Promise<Card> {
 		let columnName: string;
 
 		for (let label of this.labels) {
@@ -161,7 +173,7 @@ export class Issue {
 			columnName = this.milestone.title;
 		}
 
-		let project: Project = await this.GetProjectAsync();
+		let project: Project = await this.GetProjectAsync(owner, repo);
 		let column: Column = await project.GetColumnAsync(columnName);
 		let cards: Card[] = await column.ListCardsAsync();
 
@@ -177,20 +189,22 @@ export class Issue {
 	/**
 	 * Update issue labels.
 	 * https://docs.github.com/en/rest/reference/issues#update-an-issue
+	 * @param owner
+	 * @param repo
 	 * @param labels An array of label names to replace current labels.
 	 * @param milestone The number of the milestone to be added to this issue.
 	 * Set to -1 to remove the current milestone. If ommited, it stays unchanged.
 	 */
-	public async UpdateAsync(labels: string[], milestone: number = 0): Promise<void> {
+	public async UpdateAsync(owner: string, repo: string, labels: string[], milestone: number = 0): Promise<void> {
 		let response = await octokit.request('PATCH /repos/:owner/:repo/issues/:issue_number', {
-			owner: this.owner(),
-			repo: this.repo(),
+			owner: owner,
+			repo: repo,
 			issue_number: this.number,
 			milestone: milestone === 0 ? this.milestone.number : milestone === -1 ? null : milestone,
 			labels: labels
 		});
 
-		if (response.status !== 200) throw new Error(`Could not update labels for issue ${this.number} at "${this.repo()}".\n Octokit returned error ${response.status}.`);
+		if (response.status !== 200) throw new Error(`Could not update labels for issue ${this.number} at "${repo}".\n Octokit returned error ${response.status}.`);
 	}
 }
 
@@ -229,25 +243,7 @@ export interface Issue {
 	closed_at: Date;
 	created_at: Date;
 	updated_at: Date;
-}
-
-export interface Milestone {
-	url: string;
-	html_url: string;
-	labels_url: string;
-	id: number;
-	node_id: string;
-	number: number;
-	state: string;
-	title: string;
-	description: string;
-	creator: User;
-	open_issues: number;
-	closed_issues: number;
-	created_at: Date;
-	updated_at: Date;
-	closed_at: Date;
-	due_on: Date;
+	project?: Project;
 }
 
 // TODO: See if this can be moved
