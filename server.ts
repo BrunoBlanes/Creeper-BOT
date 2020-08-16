@@ -191,18 +191,19 @@ HttpServer.createServer(function (req, res) {
 
 						// Handle push events
 					} else if (req.rawHeaders['x-github-event'] == 'push') {
-						let pullRequests: PullRequest[] = await event.repository.ListPullRequestsAsync();
 						let pullRequest: PullRequest;
+
 						// An open pull request already exists from this user
-						for (let pr of pullRequests) {
+						for (let pr of await event.repository.ListPullRequestsAsync()) {
 							if (pr.user.id === event.pusher.id) {
 								pullRequest = pr;
 								break;
 							}
+						}
 
-							else if (pullRequests.indexOf(pr) === pullRequests.length - 1) {
-
-							}
+						// Create a new PR
+						if (!pullRequest) {
+							// TODO: Create a new pull request
 						}
 
 						for (let commit of event.commits) {
@@ -213,7 +214,7 @@ HttpServer.createServer(function (req, res) {
 									let project: Project = await issue.GetProjectAsync(owner, repo);
 									let column: Column = await project.GetColumnAsync('Done');
 									let card: Card = await issue.GetProjectCardAsync(owner, repo);
-									await pullRequest.AddIssueReferenceAsync(issue);
+									await pullRequest.AddIssueReferenceAsync(owner, repo, issue);
 									card.MoveAsync(column);
 								});
 

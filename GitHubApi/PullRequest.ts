@@ -4,6 +4,11 @@ import { Milestone } from './Milestone';
 import { Label, Issue } from './Issue';
 import { User } from './User';
 
+const header: string =
+	'============================= Start of Creeper-bot automation =============================';
+const footer: string =
+	'============================== End of Creeper-bot automation ==============================';
+
 export class PullRequest {
 	/**
 	 * List pull requests.
@@ -68,12 +73,27 @@ export class PullRequest {
 		if (response.status !== 200) throw new Error(`Could not update pull request ${this.id} from repository "${repo}" of owner "${owner}".\n Octokit returned error ${response.status}.`);
 	}
 
-	public async AddIssueReferenceAsync(issue: Issue): Promise<void> {
+	/**
+	 * Add a reference to an issue.
+	 * @param owner
+	 * @param repo
+	 * @param issue
+	 */
+	public async AddIssueReferenceAsync(owner: string, repo: string, issue: Issue): Promise<void> {
+		let index: number = this.body.indexOf(footer);
+		let ref: string = `    - This pull request will close #${issue.id} once merged into ${this.head.label}.\n`;
 
-	}
+		// Contains Creeper-bot section
+		if (index !== -1) {
+			this.body = this.body.addTo(index - 1, ref);
+		}
 
-	public async RemoveIssueReferenceAsync(issue: Issue): Promise<void> {
+		else {
+			let section: string = '\n\n\n\n```' + `\n${header}\n${ref}\n${footer}\n` + '```\n\n';
+			this.body += section;
+		}
 
+		await this.UpdateAsync(owner, repo);
 	}
 }
 
