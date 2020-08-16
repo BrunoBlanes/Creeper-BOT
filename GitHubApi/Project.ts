@@ -130,7 +130,7 @@ export class Card {
 	/**
 	 * Move a project card.
 	 * https://docs.github.com/en/rest/reference/projects#move-a-project-card
-	 * @param column
+	 * @param column The column to move this card to.
 	 */
 	public async MoveAsync(column: Column): Promise<void> {
 		let response = await octokit.request('POST /projects/columns/cards/:card_id/moves', {

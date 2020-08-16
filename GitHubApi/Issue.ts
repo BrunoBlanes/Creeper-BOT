@@ -141,7 +141,8 @@ export class Issue {
 				]
 			}
 		});
-		if (response.status !== 201) throw new Error(`Could not create card for issue ${this.id}.`);
+
+		if (response.status !== 201) throw new Error(`Could not create card for issue ${this.id}.\n Octokit returned error ${response.status}.`);
 	}
 
 	/**
@@ -239,15 +240,14 @@ export interface Issue {
 	locked: boolean;
 	active_lock_reason: string;
 	comments: number;
-	pull_request?: PullRequest;
+	pull_request?: PullRequestLink;
 	closed_at: Date;
 	created_at: Date;
 	updated_at: Date;
 	project?: Project;
 }
 
-// TODO: See if this can be moved
-export interface PullRequest {
+export interface PullRequestLink {
 	url: string;
 	html_url: string;
 	diff_url: string;

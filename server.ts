@@ -1,8 +1,9 @@
+import { Card, Project, Column } from './GitHubApi/Project';
+import { PullRequest } from './GitHubApi/PullRequest';
 import { Azure, Validator } from './Services/Azure';
 import { Milestone } from './GitHubApi/Milestone';
 import { Issue, Label } from './GitHubApi/Issue';
 import { Payload } from './GitHubApi/Webhook';
-import { Card } from './GitHubApi/Project';
 import * as HttpServer from 'http';
 
 Azure.SetPrivateSecret();
@@ -188,18 +189,43 @@ HttpServer.createServer(function (req, res) {
 							}
 						}
 
-					// Handle push events
+						// Handle push events
 					} else if (req.rawHeaders['x-github-event'] == 'push') {
-						let pushCommits = body['commits'];
-						let issueUrl = body['repository']['issues_url'].replace('{/number}', '');
-						let labelsUrl = body['repository']['labels_url'].replace('{/name}', '');
-						var issueNumbers = await commits.GetIssueNumbersFromCommits(pushCommits);
+						let pullRequests: PullRequest[] = await event.repository.ListPullRequestsAsync();
+						let pullRequest: PullRequest;
+						// An open pull request already exists from this user
+						for (let pr of pullRequests) {
+							if (pr.user.id === event.pusher.id) {
+								pullRequest = pr;
+								break;
+							}
 
-						// Add label 'Awaiting Pull Request' to issues
-						for (var i = 0; i < issueNumbers.length; i++) {
-							logSection(`ADDING LABEL "AWAITING PULL REQUEST" TO ISSUE #${issueNumbers[i]}`);
-							let response = await issues.UpdateLabels(['Awaiting Pull Request'], ['Working'], issueUrl + `/${issueNumbers[i]}`, labelsUrl, installationId);
-							console.log(response);
+							else if (pullRequests.indexOf(pr) === pullRequests.length - 1) {
+
+							}
+						}
+
+						for (let commit of event.commits) {
+							if (commit.IsIssueMentioned()) {
+								let resolved: number[] = commit.GetResolvedMentions();
+								resolved.forEach(async mention => {
+									let issue: Issue = await event.repository.GetIssueAsync(mention);
+									let project: Project = await issue.GetProjectAsync(owner, repo);
+									let column: Column = await project.GetColumnAsync('Done');
+									let card: Card = await issue.GetProjectCardAsync(owner, repo);
+									await pullRequest.AddIssueReferenceAsync(issue);
+									card.MoveAsync(column);
+								});
+
+								let unresolved: number[] = commit.GetUnresolvedMentions();
+								unresolved.forEach(async mention => {
+									let issue: Issue = await event.repository.GetIssueAsync(mention);
+									let project: Project = await issue.GetProjectAsync(owner, repo);
+									let column: Column = await project.GetColumnAsync('In progress');
+									let card: Card = await issue.GetProjectCardAsync(owner, repo);
+									card.MoveAsync(column);
+								});
+							}
 						}
 
 						// Handle pull request events
@@ -246,13 +272,6 @@ HttpServer.createServer(function (req, res) {
 								});
 								console.log(response);
 							}
-						}
-
-						// Handle workflow events
-					} else if (req.rawHeaders['x-github-event'] == 'workflow_run') {
-
-						// Workflow completed
-						if (body['action'] == 'completed') {
 						}
 					}
 				}

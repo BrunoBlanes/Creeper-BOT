@@ -1,17 +1,81 @@
-import { HttpClient } from '../Services';
 import { User } from './User';
 
-const keywords = ['closed', 'closes', 'close', 'fixed', 'fixes', 'fix', 'resolved', 'resolves', 'resolve'];
+const keywords = [
+	'fixed', 'fixes', 'fix',
+	'closed', 'closes', 'close',
+	'resolved', 'resolves', 'resolve'];
+const regex = new RegExp('/#[1-9][0-9]*/');
 
 export class Commit {
-	/**
-	 * List commits
-	 * https://docs.github.com/en/rest/reference/repos#list-commits
-	 * @param url
-	 * @param installationId
-	 */
-	public static async ListAsync(url: string, installationId: string): Promise<Array<Commit>> {
-		return await HttpClient.GetAsync<Array<Commit>>(url, installationId);
+	/** Check if there is a mention to an issue in the commit message. */
+	public IsIssueMentioned(): boolean {
+		return this.commit.message.match(regex) === null ? false : true;
+	}
+
+	public GetResolvedMentions(): number[] {
+		let message: string = this.commit.message.toLowerCase();
+		let issueNumbers: number[];
+
+		// Loop through all the known keywords
+		keywords.forEach(keyword => {
+			let keywordIndex = message.indexOf(keyword);
+
+			while (keywordIndex !== -1) {
+
+				// Ignore message before the keyword index
+				let comment = message.substring(keywordIndex);
+
+				// Regex match the issue number
+				let match = comment.match(regex);
+
+				if (match) {
+					let issueNumber: number = +match[0].substring(keywordIndex);
+
+					// Add keyword index to array
+					issueNumbers.skipDuplicatePush(issueNumber);
+				}
+
+				// Keep looking through the commit message for the same keyword
+				keywordIndex = message.indexOf(keyword, keywordIndex + keyword.length);
+			}
+		});
+
+		return issueNumbers;
+	}
+
+	public GetUnresolvedMentions(): number[] {
+		let resolvedIssues: number[] = this.GetResolvedMentions();
+		let resolvedIssuesLength: number = resolvedIssues.length;
+		let message: string = this.commit.message.toLowerCase();
+		let keywordIndex = message.indexOf('#');
+		let issueNumbers: number[];
+
+		while (keywordIndex !== -1) {
+
+			// Ignore message before the keyword index
+			let comment = message.substring(keywordIndex);
+
+			// Regex match the issue number
+			let match = comment.match(regex);
+
+			if (match) {
+				let issueNumber: number = +match[0].substring(keywordIndex);
+				resolvedIssues.skipDuplicatePush(issueNumber);
+
+				// If the length is greater then the mention is new
+				if (resolvedIssuesLength < resolvedIssues.length) {
+
+					// Add keyword index to array
+					issueNumbers.skipDuplicatePush(issueNumber);
+				}
+			}
+
+			// Keep looking through the commit message
+			keywordIndex = message.indexOf('#', keywordIndex + 1);
+		}
+
+		if (issueNumbers.length === 0) return null;
+		else return issueNumbers;
 	}
 }
 
@@ -64,72 +128,4 @@ export interface CommitData {
 export interface Parent {
 	url: string;
 	sha: string;
-}
-
-module.exports = {
-	GetIssueNumbersFromCommits: async function (commits) {
-		let issueNumbers = [];
-
-		// Loop through every commit in this push
-		for (var i = 0; i < commits.length; i++) {
-			let commitMessage = commits[i]['message'].toLowerCase();
-			let keywordIndexes = [];
-
-			// Loop through all the known keywords
-			for (var j = 0; j < keywords.length; j++) {
-				let keywordIndex = commitMessage.indexOf(keywords[j]);
-
-				// Found keyword
-				while (keywordIndex !== -1) {
-
-					// Add keyword index to array
-					pushToArray(keywordIndex, keywordIndexes);
-
-					// Keep looking through the commit comment for the same keyword
-					keywordIndex = commitMessage.indexOf(keywords[j], keywordIndex + keywords[j].length);
-				}
-			}
-
-			// Sorts the index array as crescent
-			keywordIndexes.sort(function (a, b) {
-				return a - b;
-			});
-
-			// Loop through all the saved indexes
-			for (var j = 0; j < keywordIndexes.length; j++) {
-
-				// Ignore message before the keyword index
-				let message = commitMessage.substring(keywordIndexes[j]);
-
-				// Regex match the issue number
-				let issue = message.match(/#[1-9][0-9]*/);
-
-				if (issue) {
-					let issueNumber = issue[0].substring(1);
-
-					// Add keyword index to array
-					pushToArray(issueNumber, issueNumbers);
-				}
-			}
-		}
-
-		return issueNumbers;
-	},
-};
-
-function pushToArray(item, array) {
-	// Add item to array when empty
-	if (array.length == 0) {
-		array.push(item);
-	} else {
-		for (var k = 0; k < array.length; k++) {
-
-			// Don't add if already added before
-			if (array[k] == item) {
-				break;
-			} else if (k == array.length - 1) {
-				array.push(item);
-			}
-		}
-	}
 }

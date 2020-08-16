@@ -1,3 +1,4 @@
+import { PullRequest } from './PullRequest';
 import { Milestone } from './Milestone';
 import { Issue } from './Issue';
 import { User } from './User';
@@ -14,6 +15,14 @@ export class Repository {
 	 */
 	public async GetIssueAsync(issueId: number): Promise<Issue> {
 		return await Issue.GetAsync(this.owner.login, this.name, issueId);
+	}
+
+	/**
+	 * Return a list of pull requests for the current repo.
+	 * @param state The state at which to filter pull requests by. Defaults to 'open'.
+	 */
+	public async ListPullRequestsAsync(state: 'open' | 'closed' | 'all' = 'open'): Promise<PullRequest[]> {
+		return await PullRequest.ListAsync(this.owner.login, this.name, state);
 	}
 }
 
