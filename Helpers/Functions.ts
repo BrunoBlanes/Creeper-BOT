@@ -1,7 +1,7 @@
 interface Array<T> {
 	/**
 	 * Appends new item to an array if not a duplicate of an already existing item, and returns the new length of the array.
-	 * @param item
+	 * @param {T} item
 	 */
 	skipDuplicatePush(item: T): number;
 }
@@ -25,17 +25,28 @@ Array.prototype.skipDuplicatePush = function (item): number {
 
 interface String {
     /**
-	 * The splice() method changes the content of a string by removing a range of
-	 * characters and/or adding new characters.
-	 *
+	 * Changes the content of a string by adding new characters.
 	 * @this {String}
-	 * @param {number} index Index at which to start changing the string.
+	 * @param {number} index Index at which to add the substring.
 	 * @param {string} string The String that is spliced in.
-	 * @return {string} A new string with the spliced substring.
+	 * @return {string} A new string with the substring added in.
 	 */
 	addTo(index: number, string: string): string;
+
+	/**
+	 * Changes the content of a string by removing characters.
+	 * @param {number} start Index at which to start removing characters.
+	 * @param {number} end Index at which to stop removing characters.
+	 * Note: If ommited, will delete all characters until the end of the string.
+	 */
+	remove(start: number, end?: number): string;
 }
 
 String.prototype.addTo = function (index: number, string: string): string {
 	return this.slice(0, index) + string + this.slice(index);
-}
+};
+
+String.prototype.remove = function (start: number, end?: number): string {
+	if (end) return this.slice(0, start) + this.slice(end);
+	return this.slice(0, start);
+};

@@ -98,9 +98,18 @@ HttpServer.createServer(function (req, res) {
 
 								// Content is an issue
 								if (card.IsContentAnIssue()) {
-									let labels: string[];
 									let issue: Issue = await event.repository.GetIssueAsync(card.GetContentId());
 									let columnName: string = (await card.GetColumnAsync()).name;
+									let pullRequest: PullRequest;
+									let labels: string[];
+
+									// An open pull request already exists from this sender
+									for (let pr of await event.repository.ListPullRequestsAsync()) {
+										if (pr.user.id === event.sender.id) {
+											pullRequest = pr;
+											break;
+										}
+									}
 
 									if (columnName === 'Triage') {
 										issue.labels.forEach(label => {
@@ -117,8 +126,7 @@ HttpServer.createServer(function (req, res) {
 										if (!issue.labels.some(x => x.name === 'Triage'))
 											labels.push('Triage');
 										await issue.UpdateAsync(owner, repo, labels, -1);
-
-										// TODO: Remove PR association
+										await pullRequest.RemoveIssueReferenceAsync(owner, repo, issue);
 									}
 
 									else if (columnName === 'In progress') {
@@ -136,8 +144,7 @@ HttpServer.createServer(function (req, res) {
 										if (!issue.labels.some(x => x.name === 'Working'))
 											labels.push('Working');
 										await issue.UpdateAsync(owner, repo, labels);
-
-										// TODO: Remove PR association
+										await pullRequest.RemoveIssueReferenceAsync(owner, repo, issue);
 									}
 
 									else if (columnName === 'Done') {
@@ -183,7 +190,7 @@ HttpServer.createServer(function (req, res) {
 											}
 										}
 
-										// TODO: Remove PR association
+										await pullRequest.RemoveIssueReferenceAsync(owner, repo, issue);
 									}
 								}
 							}

@@ -83,14 +83,35 @@ export class PullRequest {
 		let index: number = this.body.indexOf(footer);
 		let ref: string = `    - This pull request will close #${issue.id} once merged into ${this.head.label}.\n`;
 
-		// Contains Creeper-bot section
 		if (index !== -1) {
+			// Add reference to existing Creeper-bot section
 			this.body = this.body.addTo(index - 1, ref);
 		}
 
 		else {
+			// Create Creeper-bot section
 			let section: string = '\n\n\n\n```' + `\n${header}\n${ref}\n${footer}\n` + '```\n\n';
 			this.body += section;
+		}
+
+		await this.UpdateAsync(owner, repo);
+	}
+
+	public async RemoveIssueReferenceAsync(owner: string, repo: string, issue: Issue): Promise<void> {
+		let index: number = this.body.indexOf(`#${issue.id}`);
+		let ref: string = `    - This pull request will close #${issue.id} once merged into ${this.head.label}.\n`;
+
+		if (index !== -1) {
+			// Remove issue reference
+			let start: number = this.body.indexOf(ref);
+			this.body = this.body.remove(start, start + ref.length);
+		}
+
+		// No more referenced issues at this pull request
+		if (this.body.indexOf('This pull request will close #') === -1) {
+			let start: number = this.body.indexOf(header);
+			let end: number = this.body.indexOf(footer) + footer.length;
+			this.body = this.body.remove(start, end);
 		}
 
 		await this.UpdateAsync(owner, repo);
