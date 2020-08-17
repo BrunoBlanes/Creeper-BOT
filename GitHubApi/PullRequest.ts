@@ -80,8 +80,8 @@ export class PullRequest {
 	 * @param issue
 	 */
 	public async AddIssueReferenceAsync(owner: string, repo: string, issue: Issue): Promise<void> {
-		let index: number = this.body.indexOf(footer);
 		let ref: string = `    - This pull request will close #${issue.id} once merged into ${this.head.label}.\n`;
+		let index: number = this.body.indexOf(footer);
 
 		if (index !== -1) {
 			// Add reference to existing Creeper-bot section
@@ -90,28 +90,34 @@ export class PullRequest {
 
 		else {
 			// Create Creeper-bot section
-			let section: string = '\n\n\n\n```' + `\n${header}\n${ref}\n${footer}\n` + '```\n\n';
+			let section: string = `\n\n\n\n${header}\n${ref}\n${footer}\n\n`;
 			this.body += section;
 		}
 
 		await this.UpdateAsync(owner, repo);
 	}
 
+	/**
+	 * Remove a reference to an issue.
+	 * @param owner
+	 * @param repo
+	 * @param issue
+	 */
 	public async RemoveIssueReferenceAsync(owner: string, repo: string, issue: Issue): Promise<void> {
-		let index: number = this.body.indexOf(`#${issue.id}`);
 		let ref: string = `    - This pull request will close #${issue.id} once merged into ${this.head.label}.\n`;
+		let index: number = this.body.indexOf(`#${issue.id}`);
 
 		if (index !== -1) {
 			// Remove issue reference
 			let start: number = this.body.indexOf(ref);
 			this.body = this.body.remove(start, start + ref.length);
-		}
 
-		// No more referenced issues at this pull request
-		if (this.body.indexOf('This pull request will close #') === -1) {
-			let start: number = this.body.indexOf(header);
-			let end: number = this.body.indexOf(footer) + footer.length;
-			this.body = this.body.remove(start, end);
+			// No more referenced issues at this pull request
+			if (this.body.indexOf('This pull request will close #') === -1) {
+				let start: number = this.body.indexOf(header);
+				let end: number = this.body.indexOf(footer) + footer.length;
+				this.body = this.body.remove(start, end);
+			}
 		}
 
 		await this.UpdateAsync(owner, repo);

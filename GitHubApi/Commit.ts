@@ -1,4 +1,5 @@
 import { User } from './User';
+import { Issue } from './Issue';
 
 const keywords = [
 	'fixed', 'fixes', 'fix',
@@ -12,9 +13,10 @@ export class Commit {
 		return this.commit.message.match(regex) === null ? false : true;
 	}
 
-	public GetResolvedMentions(): number[] {
+	// TODO: Merge get mention methos into one using tuple
+	public GetMentions(): [number, boolean][] {
 		let message: string = this.commit.message.toLowerCase();
-		let issueNumbers: number[];
+		let mentions: [number, boolean][];
 
 		// Loop through all the known keywords
 		keywords.forEach(keyword => {
@@ -32,7 +34,7 @@ export class Commit {
 					let issueNumber: number = +match[0].substring(keywordIndex);
 
 					// Add keyword index to array
-					issueNumbers.skipDuplicatePush(issueNumber);
+					mentions.skipDuplicatePush([issueNumber, true]);
 				}
 
 				// Keep looking through the commit message for the same keyword
@@ -40,7 +42,7 @@ export class Commit {
 			}
 		});
 
-		return issueNumbers;
+		return mentions;
 	}
 
 	public GetUnresolvedMentions(): number[] {

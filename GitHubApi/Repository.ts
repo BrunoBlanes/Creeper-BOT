@@ -24,6 +24,16 @@ export class Repository {
 	public async ListPullRequestsAsync(state: 'open' | 'closed' | 'all' = 'open'): Promise<PullRequest[]> {
 		return await PullRequest.ListAsync(this.owner.login, this.name, state);
 	}
+
+	/**
+	 * Create a pull request.
+	 * @param title The title of the pull request.
+	 * @param head The head branch where your changes will be merged.
+	 * @param base The base branch where your changes are.
+	 */
+	public async CreatePullRequestAsync(title: string, head: string, base: string): Promise<PullRequest> {
+		return await PullRequest.CreateAsync(this.owner.login, this.name, title, head, base);
+	}
 }
 
 export interface Repository {

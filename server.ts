@@ -98,12 +98,13 @@ HttpServer.createServer(function (req, res) {
 
 								// Content is an issue
 								if (card.IsContentAnIssue()) {
+									let getMilestonesTask: Promise<Milestone[]> = event.repository.ListMilestonesAsync();
 									let issue: Issue = await event.repository.GetIssueAsync(card.GetContentId());
 									let columnName: string = (await card.GetColumnAsync()).name;
 									let pullRequest: PullRequest;
 									let labels: string[];
 
-									// An open pull request already exists from this sender
+									// Look for an open pull request from this user
 									for (let pr of await event.repository.ListPullRequestsAsync()) {
 										if (pr.user.id === event.sender.id) {
 											pullRequest = pr;
@@ -111,6 +112,7 @@ HttpServer.createServer(function (req, res) {
 										}
 									}
 
+									// Moved to 'Triage'
 									if (columnName === 'Triage') {
 										issue.labels.forEach(label => {
 											if (label.name === 'Working'
@@ -123,12 +125,12 @@ HttpServer.createServer(function (req, res) {
 											}
 										});
 
-										if (!issue.labels.some(x => x.name === 'Triage'))
-											labels.push('Triage');
+										if (!issue.labels.some(x => x.name === 'Triage')) labels.push('Triage');
 										await issue.UpdateAsync(owner, repo, labels, -1);
-										await pullRequest.RemoveIssueReferenceAsync(owner, repo, issue);
+										if (pullRequest) await pullRequest.RemoveIssueReferenceAsync(owner, repo, issue);
 									}
 
+									// Moved to 'In progess'
 									else if (columnName === 'In progress') {
 										issue.labels.forEach(label => {
 											if (label.name === 'Triage'
@@ -141,17 +143,17 @@ HttpServer.createServer(function (req, res) {
 											}
 										});
 
-										if (!issue.labels.some(x => x.name === 'Working'))
-											labels.push('Working');
+										if (!issue.labels.some(x => x.name === 'Working')) labels.push('Working');
 										await issue.UpdateAsync(owner, repo, labels);
-										await pullRequest.RemoveIssueReferenceAsync(owner, repo, issue);
+										if (pullRequest) await pullRequest.RemoveIssueReferenceAsync(owner, repo, issue);
 									}
 
+									// Moved to 'Done'
 									else if (columnName === 'Done') {
 										issue.labels.forEach(label => {
 											if (label.name === 'Triage'
-												|| label.name === 'Working'
 												|| label.name === 'Fixed'
+												|| label.name === 'Working'
 												|| label.name === 'Complete') {
 												issue.labels.splice(issue.labels.indexOf(label), 1);
 											} else {
@@ -159,16 +161,16 @@ HttpServer.createServer(function (req, res) {
 											}
 										});
 
-										if (!issue.labels.some(x => x.name === 'Awaiting PR'))
-											labels.push('Awaiting PR');
+										if (!issue.labels.some(x => x.name === 'Awaiting PR')) labels.push('Awaiting PR');
 										await issue.UpdateAsync(owner, repo, labels);
 									}
 
-									else {
+									// Moved to a milestone column
+									else if ((await getMilestonesTask).some(milestone => milestone.title === columnName)) {
 										issue.labels.forEach(label => {
 											if (label.name === 'Triage'
-												|| label.name === 'Working'
 												|| label.name === 'Fixed'
+												|| label.name === 'Working'
 												|| label.name === 'Complete'
 												|| label.name === 'Awaiting PR') {
 												issue.labels.splice(issue.labels.indexOf(label), 1);
@@ -177,30 +179,29 @@ HttpServer.createServer(function (req, res) {
 											}
 										});
 
-										let milestones: Milestone[] = await event.repository.ListMilestonesAsync();
+										// Get the task values
+										let milestones: Milestone[] = await getMilestonesTask;
 
+										// Add milestone to issue
 										for (let milestone of milestones) {
 											if (milestone.title === columnName) {
 												await issue.UpdateAsync(owner, repo, labels, milestone.id);
 												break;
 											}
-
-											else if (milestones.indexOf(milestone) === milestones.length - 1) {
-												await issue.UpdateAsync(owner, repo, labels, -1);
-											}
 										}
 
-										await pullRequest.RemoveIssueReferenceAsync(owner, repo, issue);
+										if (pullRequest) await pullRequest.RemoveIssueReferenceAsync(owner, repo, issue);
 									}
 								}
 							}
 						}
+					}
 
-						// Handle push events
-					} else if (req.rawHeaders['x-github-event'] == 'push') {
+					// Handle push events
+					else if (req.rawHeaders['x-github-event'] == 'push') {
 						let pullRequest: PullRequest;
 
-						// An open pull request already exists from this user
+						// Look for an open pull request from this user
 						for (let pr of await event.repository.ListPullRequestsAsync()) {
 							if (pr.user.id === event.pusher.id) {
 								pullRequest = pr;
@@ -210,87 +211,60 @@ HttpServer.createServer(function (req, res) {
 
 						// Create a new PR
 						if (!pullRequest) {
-							// TODO: Create a new pull request
+							// TODO: Create a pull request
+							pullRequest = await event.repository.CreatePullRequestAsync();
 						}
 
 						for (let commit of event.commits) {
+
+							// There are issues linked in this commit
 							if (commit.IsIssueMentioned()) {
-								let resolved: number[] = commit.GetResolvedMentions();
-								resolved.forEach(async mention => {
-									let issue: Issue = await event.repository.GetIssueAsync(mention);
-									let project: Project = await issue.GetProjectAsync(owner, repo);
-									let column: Column = await project.GetColumnAsync('Done');
-									let card: Card = await issue.GetProjectCardAsync(owner, repo);
-									await pullRequest.AddIssueReferenceAsync(owner, repo, issue);
-									card.MoveAsync(column);
-								});
 
-								let unresolved: number[] = commit.GetUnresolvedMentions();
-								unresolved.forEach(async mention => {
-									let issue: Issue = await event.repository.GetIssueAsync(mention);
+								// Move resolved issues' project card to 'Done' column
+								let mentions: [number, boolean][] = commit.GetMentions();
+								mentions.forEach(async mention => {
+									let issue: Issue = await event.repository.GetIssueAsync(mention[0]);
 									let project: Project = await issue.GetProjectAsync(owner, repo);
-									let column: Column = await project.GetColumnAsync('In progress');
 									let card: Card = await issue.GetProjectCardAsync(owner, repo);
+									let column: Column;
+
+									// Issue is resolved
+									if (mention[1] === true) {
+										column = await project.GetColumnAsync('Done');
+
+										// Add a reference to this issue in this user's pull request
+										await pullRequest.AddIssueReferenceAsync(owner, repo, issue);
+									}
+
+									// Issue is not resolved
+									else if (mention[1] === false) {
+										column = await project.GetColumnAsync('In progress');
+									}
+
+									// Move project card
 									card.MoveAsync(column);
 								});
 							}
 						}
+					}
 
-						// Handle pull request events
-					} else if (req.rawHeaders['x-github-event'] == 'pull_request') {
-						let prUrl = body['pull_request']['url'];
-						let prBody = body['pull_request']['body'];
-						let commitsUrl = body['pull_request']['commits_url'];
-						let prCommits = await commits.GetCommits(commitsUrl, installationId);
-
-						// Get all the issue numbers from this pr
-						let prIssues = await pullrequest.GetIssueNumbersFromPRCommits(prCommits, installationId);
-
-						// New pull request created
-						if (body['action'] == 'opened') {
-
-							// Get all the commits from this pr
-							logSection('LINKING ISSUES TO PULL REQUEST');
-
-							// issues found
-							if (prIssues) {
-								prBody = generateBody(prBody, prIssues);
-
-								// Updates the pr body to close found issues
-								let response = await httpClient.Patch(prUrl, installationId, {
-									body: prBody
-								});
-								console.log(response);
-							}
-
-							// Open pull request updated
-						} else if (body['action'] == 'synchronize') {
-
-							// Get all the commits from this pr
-							logSection('LINKING ISSUES TO EXISTING PULL REQUEST');
-							prBody = prBody.substring(0, prBody.indexOf('Creeper-bot:') - 1);
-
-							// issues found
-							if (prIssues) {
-								prBody = generateBody(prBody, prIssues);
-
-								// Updates the pr body to close found issues
-								let response = await httpClient.Patch(prUrl, installationId, {
-									body: prBody
-								});
-								console.log(response);
-							}
-						}
+					// Handle pull request events
+					// https://docs.github.com/en/developers/webhooks-and-events/webhook-events-and-payloads#pull_request
+					else if (req.rawHeaders['x-github-event'] === 'pull_request') {
 					}
 				}
 			}
 		});
 
 		res.end();
-	} else {
+	}
+
+	else {
 		res.statusCode = 200;
 		res.setHeader('Content-Type', 'text/html');
-		res.write('<p>Creeper-Bot is a bot created by Bruno Blanes to automate his personal GitHub account.<p>You can find more about him at <a href="https://github.com/BrunoBlanes/Creeper-Bot/">https://github.com/BrunoBlanes/Creeper-Bot/</a>', 'text/html; charset=utf-8');
+		res.write(
+			'<p>Creeper-Bot is a bot created by Bruno Blanes to automate his personal GitHub account.' +
+			'<p>You can find more about him at <a href="https://github.com/BrunoBlanes/Creeper-bot/">https://github.com/BrunoBlanes/Creeper-bot/</a>.', 'text/html; charset=utf-8');
 		res.end();
 	}
 }).listen(process.env.port || 1337);
