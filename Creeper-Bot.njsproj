@@ -49,10 +49,13 @@ AZURE_TENANT_ID=33d6dc3d-32f7-4da6-803f-134b326a4c73</Environment>
   </ItemGroup>
   <ItemGroup>
     <Folder Include="GitHubApi\" />
-    <Folder Include="Helpers\" />
+    <Folder Include="Extensions\" />
     <Folder Include="Services\" />
   </ItemGroup>
   <ItemGroup>
+    <TypeScriptCompile Include="Extensions\Arrays.ts">
+      <SubType>Code</SubType>
+    </TypeScriptCompile>
     <TypeScriptCompile Include="GitHubApi\Milestone.ts">
       <SubType>Code</SubType>
     </TypeScriptCompile>
@@ -65,7 +68,7 @@ AZURE_TENANT_ID=33d6dc3d-32f7-4da6-803f-134b326a4c73</Environment>
     <TypeScriptCompile Include="GitHubApi\Webhook.ts">
       <SubType>Code</SubType>
     </TypeScriptCompile>
-    <TypeScriptCompile Include="Helpers\Functions.ts">
+    <TypeScriptCompile Include="Extensions\Strings.ts">
       <SubType>Code</SubType>
     </TypeScriptCompile>
     <TypeScriptCompile Include="server.ts">
