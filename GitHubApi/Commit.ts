@@ -1,5 +1,4 @@
 import { User } from './User';
-import { Issue } from './Issue';
 
 const keywords = [
 	'fixed', 'fixes', 'fix',
@@ -13,71 +12,42 @@ export class Commit {
 		return this.commit.message.match(regex) === null ? false : true;
 	}
 
-	// TODO: Merge get mention methos into one using tuple
+	/** Return a list with all the issues mentioned. */
 	public GetMentions(): [number, boolean][] {
 		let message: string = this.commit.message.toLowerCase();
+		let match: RegExpMatchArray = message.match(regex);
 		let mentions: [number, boolean][];
 
-		// Loop through all the known keywords
-		keywords.forEach(keyword => {
-			let keywordIndex = message.indexOf(keyword);
+		// Issue mention found
+		while (match !== null) {
+			let resolved: boolean = false;
 
-			while (keywordIndex !== -1) {
+			for (let keyword of keywords) {
 
-				// Ignore message before the keyword index
-				let comment = message.substring(keywordIndex);
+				// Look for a closing keyword in the commit message up until the issue mention
+				let keywordIndex: number = message.indexOf(keyword, undefined, match.index);
 
-				// Regex match the issue number
-				let match = comment.match(regex);
+				if (keywordIndex !== -1) {
 
-				if (match) {
-					let issueNumber: number = +match[0].substring(keywordIndex);
-
-					// Add keyword index to array
-					mentions.skipDuplicatePush([issueNumber, true]);
-				}
-
-				// Keep looking through the commit message for the same keyword
-				keywordIndex = message.indexOf(keyword, keywordIndex + keyword.length);
-			}
-		});
-
-		return mentions;
-	}
-
-	public GetUnresolvedMentions(): number[] {
-		let resolvedIssues: number[] = this.GetResolvedMentions();
-		let resolvedIssuesLength: number = resolvedIssues.length;
-		let message: string = this.commit.message.toLowerCase();
-		let keywordIndex = message.indexOf('#');
-		let issueNumbers: number[];
-
-		while (keywordIndex !== -1) {
-
-			// Ignore message before the keyword index
-			let comment = message.substring(keywordIndex);
-
-			// Regex match the issue number
-			let match = comment.match(regex);
-
-			if (match) {
-				let issueNumber: number = +match[0].substring(keywordIndex);
-				resolvedIssues.skipDuplicatePush(issueNumber);
-
-				// If the length is greater then the mention is new
-				if (resolvedIssuesLength < resolvedIssues.length) {
-
-					// Add keyword index to array
-					issueNumbers.skipDuplicatePush(issueNumber);
+					// Keyword was used just before issue was mentioned
+					if ((keywordIndex + keyword.length) === match.index - 2) {
+						resolved = true;
+						break;
+					}
 				}
 			}
 
-			// Keep looking through the commit message
-			keywordIndex = message.indexOf('#', keywordIndex + 1);
+			// Add keyword index to array
+			mentions.skipDuplicatePush([+match[0], resolved]);
+
+			// Trim the message to remove the current match
+			message = message.substring(match.index + match[0].length);
+
+			// Look for the next match
+			match = message.match(regex);
 		}
 
-		if (issueNumbers.length === 0) return null;
-		else return issueNumbers;
+		return mentions;
 	}
 }
 
