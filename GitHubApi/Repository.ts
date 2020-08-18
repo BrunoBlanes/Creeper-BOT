@@ -28,10 +28,31 @@ export class Repository {
 	/**
 	 * Create a pull request.
 	 * @param title The title of the pull request.
-	 * @param head The head branch where your changes will be merged.
-	 * @param base The base branch where your changes are.
+	 * @param head The name of the branch where your changes are implemented.
 	 */
-	public async CreatePullRequestAsync(title: string, head: string, base: string): Promise<PullRequest> {
+	public async CreatePullRequestAsync(title: string, head: string): Promise<PullRequest> {
+		let branchname: string[] = head.split('/');
+		let base: string;
+
+		// Pulls from 'development' will be mergen into a 'release/*' branch
+		if (branchname.last() === 'development') {
+
+			// TODO: Create release branch if not existing
+			// TODO: Get release version
+			let releaseVersion: string;
+			base = `release/${releaseVersion}`;
+		}
+
+		// Pulls from 'hotfix/*' or 'release/*' will be merged into 'master' branch
+		else if (branchname[branchname.length - 2] === 'hotfix'
+			|| branchname[branchname.length - 2] === 'release') {
+
+			// TODO: Merge this pr to development as well
+			base = 'master';
+		}
+
+		// Pulls from 'feature/*' will be merged into the 'development' branch
+		else if (branchname[branchname.length - 2] === 'feature') base = 'development';
 		return await PullRequest.CreateAsync(this.owner.login, this.name, title, head, base);
 	}
 }

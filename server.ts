@@ -1,9 +1,9 @@
 import { Card, Project, Column } from './GitHubApi/Project';
 import { PullRequest } from './GitHubApi/PullRequest';
 import { Azure, Validator } from './Services/Azure';
+import { EventPayload } from './GitHubApi/Webhook';
 import { Milestone } from './GitHubApi/Milestone';
 import { Issue, Label } from './GitHubApi/Issue';
-import { Payload } from './GitHubApi/Webhook';
 import * as HttpServer from 'http';
 
 Azure.SetPrivateSecret();
@@ -20,7 +20,7 @@ HttpServer.createServer(function (req, res) {
 			if (await Validator.ValidateSecretAsync(body, req.rawHeaders['x-hub-signature'])) {
 
 				// Parse as json
-				let event: Payload = JSON.parse(body);
+				let event: EventPayload = JSON.parse(body);
 				let repo: string = event.repository.name;
 				let owner: string = event.repository.owner.login;
 
@@ -198,52 +198,52 @@ HttpServer.createServer(function (req, res) {
 					}
 
 					// Handle push events
+					// https://docs.github.com/en/developers/webhooks-and-events/webhook-events-and-payloads#push
 					else if (req.rawHeaders['x-github-event'] == 'push') {
-						let pullRequest: PullRequest;
 
-						// Look for an open pull request from this user
-						for (let pr of await event.repository.ListPullRequestsAsync()) {
-							if (pr.user.id === event.pusher.id) {
-								pullRequest = pr;
-								break;
+						// Don't run if this push is not to one of the branches defined below
+						if (['hotfix', 'release', 'feature', 'development'].some(branch => event.ref.indexOf(branch) !== -1)) {
+							let pullRequest: PullRequest;
+
+							// Look for an open pull request from this user
+							for (let pr of await event.repository.ListPullRequestsAsync()) {
+								if (pr.user.id === event.pusher.id) {
+									pullRequest = pr;
+									break;
+								}
 							}
-						}
 
-						// Create a new PR
-						if (!pullRequest) {
-							// TODO: Create a pull request
-							pullRequest = await event.repository.CreatePullRequestAsync();
-						}
+							// TODO: Create PR title
+							// Create a new pull request if none was found for this user
+							if (!pullRequest) pullRequest = await event.repository.CreatePullRequestAsync('PR Title', event.ref);
 
-						for (let commit of event.commits) {
+							for (let commit of event.commits) {
 
-							// There are issues linked in this commit
-							if (commit.IsIssueMentioned()) {
+								// There are issues linked in this commit
+								if (commit.IsIssueMentioned()) {
 
-								// Move resolved issues' project card to 'Done' column
-								let mentions: [number, boolean][] = commit.GetMentions();
-								mentions.forEach(async mention => {
-									let issue: Issue = await event.repository.GetIssueAsync(mention[0]);
-									let project: Project = await issue.GetProjectAsync(owner, repo);
-									let card: Card = await issue.GetProjectCardAsync(owner, repo);
-									let column: Column;
+									// Move resolved issues' project card to 'Done' column
+									commit.GetMentions().forEach(async mention => {
+										let issue: Issue = await event.repository.GetIssueAsync(mention[0]);
+										let project: Project = await issue.GetProjectAsync(owner, repo);
+										let card: Card = await issue.GetProjectCardAsync(owner, repo);
+										let column: Column;
 
-									// Issue is resolved
-									if (mention[1] === true) {
-										column = await project.GetColumnAsync('Done');
+										// Issue is resolved
+										if (mention[1]) {
+											column = await project.GetColumnAsync('Done');
 
-										// Add a reference to this issue in this user's pull request
-										await pullRequest.AddIssueReferenceAsync(owner, repo, issue);
-									}
+											// Add a reference to this issue in this user's pull request
+											await pullRequest.AddIssueReferenceAsync(owner, repo, issue);
+										}
 
-									// Issue is not resolved
-									else if (mention[1] === false) {
-										column = await project.GetColumnAsync('In progress');
-									}
+										// Issue is not resolved
+										else column = await project.GetColumnAsync('In progress');
 
-									// Move project card
-									card.MoveAsync(column);
-								});
+										// Move project card
+										card.MoveAsync(column);
+									});
+								}
 							}
 						}
 					}

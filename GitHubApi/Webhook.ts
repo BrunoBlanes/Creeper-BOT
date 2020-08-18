@@ -4,7 +4,7 @@ import { Commit } from './Commit';
 import { Card } from './Project';
 import { User } from './User';
 
-export interface Payload {
+export interface EventPayload {
 	action: string;
 	sender: User;
 	repository: Repository;
@@ -15,4 +15,5 @@ export interface Payload {
 	project_card?: Card;
 	commits?: Commit[];
 	pusher?: User;
+	ref?: string;
 }
