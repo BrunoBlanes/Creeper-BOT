@@ -1,14 +1,10 @@
-<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="4.0">
   <PropertyGroup>
     <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">14.0</VisualStudioVersion>
     <VSToolsPath Condition="'$(VSToolsPath)' == ''">$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)</VSToolsPath>
-    <Name>Creeper-Bot</Name>
-    <RootNamespace>Creeper-Bot</RootNamespace>
+    <Name>Creeper-bot</Name>
+    <RootNamespace>Creeper-bot</RootNamespace>
     <SaveNodeJsSettingsInProjectFile>True</SaveNodeJsSettingsInProjectFile>
-    <Environment>AZURE_CLIENT_ID=a47da6a4-33a8-4322-b5c3-407e0233711d
-AZURE_CLIENT_SECRET=PhiyMUHxtVX.w_8EQpWbfIn-bY38pVywZW
-AZURE_TENANT_ID=33d6dc3d-32f7-4da6-803f-134b326a4c73</Environment>
   </PropertyGroup>
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
@@ -16,7 +12,7 @@ AZURE_TENANT_ID=33d6dc3d-32f7-4da6-803f-134b326a4c73</Environment>
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>2d418db4-af5d-4253-9726-920f49f97bc9</ProjectGuid>
     <ProjectHome>.</ProjectHome>
-    <StartupFile>Services\Octokit.ts</StartupFile>
+    <StartupFile>server.ts</StartupFile>
     <SearchPath>
     </SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
