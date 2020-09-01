@@ -1,5 +1,7 @@
 import { PullRequest } from './PullRequest';
 import { Milestone } from './Milestone';
+import { Reference } from './Reference';
+import { Release } from './Release';
 import { Issue } from './Issue';
 import { User } from './User';
 
@@ -26,18 +28,66 @@ export class Repository {
 	}
 
 	/**
+	 * Return a list of references for the current repo.
+	 * @param ref A matching reference name.
+	 */
+	public async ListReferencesAsync(ref: string): Promise<Reference[]> {
+		return await Reference.ListAsync(this.owner.login, this.name, ref);
+	}
+
+	/**
+	 * Create a new reference at this repo.
+	 * @param refName String of the name of the fully qualified reference (ie: refs/heads/master). If it doesn’t start with ‘refs’ and have at least two slashes, it will be rejected.
+	 * @param sha String of the SHA1 value to set this reference to.
+	 */
+	public async CreateReferenceAsync(refName: string, sha: string): Promise<Reference> {
+		return await Reference.CreateAsync(this.owner.login, this.name, refName, sha);
+	}
+
+	/**
+	 * Create a new release on this repo.
+	 * @param name The name of the release.
+	 */
+	public async CreateReleaseAsync(name: string): Promise<Release> {
+		return await Release.CreateAsync(this.owner.login, this.name, name);
+	}
+
+	/** Return a list of releases for the current repo. */
+	public async ListReleasesAsync(): Promise<Release[]> {
+		return await Release.ListAsync(this.owner.login, this.name);
+	}
+
+	/**
 	 * Create a pull request.
 	 * @param title The title of the pull request.
 	 * @param head The name of the branch where your changes are implemented.
 	 */
 	public async CreatePullRequestAsync(title: string, head: string): Promise<PullRequest> {
 		let branchname: string[] = head.split('/');
+		let reference: Reference;
 		let base: string;
 
-		// Pulls from 'development' will be mergen into a 'release/*' branch
+		// Pulls from 'development' will be merged into a 'release/*' branch
 		if (branchname.last() === 'development') {
+			let references: Reference[] = await (await this.ListReferencesAsync('release')).sort(function (a, b) {
+				if (a.ref < b.ref) return -1;
+				if (a.ref > b.ref) return 1;
+				return 0;
+			});
 
-			// TODO: Create release branch if not existing
+			// Gets the latest release
+			let latestRelease: Release = (await this.ListReleasesAsync()).last();
+
+			for (let ref of references) {
+				if (ref.ref > latestRelease.name) {
+					reference = ref;
+					break;
+				}
+			}
+
+			// Create new release branch if none later than the latest release was found
+			if (!reference) reference = await this.CreateReferenceAsync('refs/heads/release/', '');
+
 			// TODO: Get release version
 			let releaseVersion: string;
 			base = `release/${releaseVersion}`;
@@ -47,7 +97,8 @@ export class Repository {
 		else if (branchname[branchname.length - 2] === 'hotfix'
 			|| branchname[branchname.length - 2] === 'release') {
 
-			// TODO: Merge this pr to development as well
+			// TODO: Merge this pr to development too
+			// TODO: Create a release
 			base = 'master';
 		}
 

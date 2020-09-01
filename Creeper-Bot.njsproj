@@ -55,6 +55,12 @@
     <TypeScriptCompile Include="GitHubApi\Milestone.ts">
       <SubType>Code</SubType>
     </TypeScriptCompile>
+    <TypeScriptCompile Include="GitHubApi\Reference.ts">
+      <SubType>Code</SubType>
+    </TypeScriptCompile>
+    <TypeScriptCompile Include="GitHubApi\Release.ts">
+      <SubType>Code</SubType>
+    </TypeScriptCompile>
     <TypeScriptCompile Include="GitHubApi\Repository.ts">
       <SubType>Code</SubType>
     </TypeScriptCompile>
