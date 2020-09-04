@@ -48,6 +48,7 @@
   <ItemGroup>
     <Folder Include="GitHubApi\" />
     <Folder Include="Extensions\" />
+    <Folder Include="Properties\" />
     <Folder Include="Properties\PublishProfiles\" />
     <Folder Include="Services\" />
   </ItemGroup>
