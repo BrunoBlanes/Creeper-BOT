@@ -34,6 +34,7 @@
     <None Include="Creeper-Bot - Web Deploy.pubxml" />
     <Content Include="GitHubApi\Commit.ts" />
     <Content Include="GitHubApi\PullRequest.ts" />
+    <None Include="Properties\PublishProfiles\Creeper-Bot - Web Deploy.pubxml" />
     <Content Include="Services\Octokit.ts" />
     <Content Include="GitHubApi\Project.ts" />
     <Content Include="GitHubApi\Issue.ts" />
@@ -47,6 +48,7 @@
   <ItemGroup>
     <Folder Include="GitHubApi\" />
     <Folder Include="Extensions\" />
+    <Folder Include="Properties\PublishProfiles\" />
     <Folder Include="Services\" />
   </ItemGroup>
   <ItemGroup>
