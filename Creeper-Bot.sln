@@ -5,6 +5,11 @@ VisualStudioVersion = 16.0.30223.230
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9092AA53-FB77-4645-B42D-1CCCA6BD08BD}") = "Creeper-Bot", "Creeper-Bot.njsproj", "{2D418DB4-AF5D-4253-9726-920F49F97BC9}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{675FC34B-39C7-404A-9707-3A55347AE66B}"
+	ProjectSection(SolutionItems) = preProject
+		.azure\pipelines\azure-devops-deploy.yaml = .azure\pipelines\azure-devops-deploy.yaml
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
