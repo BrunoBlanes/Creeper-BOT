@@ -1,7 +1,7 @@
 {
 	"name": "creeper-bot",
 	"version": "1.0.0",
-	"description": "Creeper-Bot",
+	"description": "Creeper-bot",
 	"scripts": {
 		"build": "tsc --build",
 		"clean": "tsc --build --clean",

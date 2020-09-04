@@ -231,7 +231,8 @@ HttpServer.createServer(function (req, res) {
                                         if (mention[1]) {
                                             column = yield project.GetColumnAsync('Done');
                                             // Add a reference to this issue in this user's pull request
-                                            yield pullRequest.AddIssueReferenceAsync(owner, repo, issue);
+                                            if (pullRequest !== null)
+                                                yield pullRequest.AddIssueReferenceAsync(owner, repo, issue);
                                         }
                                         // Issue is not resolved
                                         else
@@ -255,7 +256,7 @@ HttpServer.createServer(function (req, res) {
     else {
         res.statusCode = 200;
         res.setHeader('Content-Type', 'text/html');
-        res.write('<p>Creeper-Bot is a bot created by Bruno Blanes to automate his personal GitHub account.' +
+        res.write('<p>Creeper-bot is a bot created by Bruno Blanes to automate his personal GitHub account.' +
             '<p>You can find more about him at <a href="https://github.com/BrunoBlanes/Creeper-bot/">https://github.com/BrunoBlanes/Creeper-bot/</a>.', 'text/html; charset=utf-8');
         res.end();
     }

@@ -81,45 +81,17 @@ class Repository {
     CreatePullRequestAsync(head) {
         return __awaiter(this, void 0, void 0, function* () {
             let branchname = head.split('/');
-            let reference;
-            let title;
-            let base;
-            // Pulls from 'development' will be merged into a 'release/*' branch
-            if (branchname.last() === 'development') {
-                let references = yield (yield this.ListReferencesAsync('release')).sort(function (a, b) {
-                    if (a.ref < b.ref)
-                        return -1;
-                    if (a.ref > b.ref)
-                        return 1;
-                    return 0;
-                });
-                // Gets the latest release
-                let latestRelease = (yield this.ListReleasesAsync()).last();
-                for (let ref of references) {
-                    if (ref.ref > latestRelease.name) {
-                        reference = ref;
-                        break;
-                    }
-                }
-                // Create new release branch if none later than the latest release was found
-                if (!reference)
-                    reference = yield this.CreateReferenceAsync('refs/heads/release/', '');
-                title = `Merge branch "development" into "${reference.ref.split('/').last()}"`;
-                // TODO: Get release version
-                let releaseVersion;
-                base = `release/${releaseVersion}`;
-            }
             // Pulls from 'hotfix/*' or 'release/*' will be merged into 'master' branch
-            else if (branchname[branchname.length - 2] === 'hotfix'
-                || branchname[branchname.length - 2] === 'release') {
-                // TODO: Merge this pr to development too
-                // TODO: Create a release
-                base = 'master';
+            if (branchname[branchname.length - 2] === 'hotfix' || branchname[branchname.length - 2] === 'release') {
+                yield PullRequest_1.PullRequest.CreateAsync(this.owner.login, this.name, `Merge branch "${branchname[branchname.length - 2]}/${branchname.last()}" into "development"`, head, 'development');
+                return yield PullRequest_1.PullRequest.CreateAsync(this.owner.login, this.name, `Merge branch "${branchname[branchname.length - 2]}/${branchname.last()}" into "master"`, head, 'master');
             }
             // Pulls from 'feature/*' will be merged into the 'development' branch
-            else if (branchname[branchname.length - 2] === 'feature')
-                base = 'development';
-            return yield PullRequest_1.PullRequest.CreateAsync(this.owner.login, this.name, title, head, base);
+            else if (branchname[branchname.length - 2] === 'feature') {
+                return yield PullRequest_1.PullRequest.CreateAsync(this.owner.login, this.name, `Merge branch "feature/${branchname.last()}" into "development"`, head, 'development');
+            }
+            else
+                return null;
         });
     }
 }
