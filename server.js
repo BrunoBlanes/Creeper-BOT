@@ -215,10 +215,9 @@ HttpServer.createServer(function (req, res) {
                                     break;
                                 }
                             }
-                            // TODO: Create PR title
                             // Create a new pull request if none was found for this user
                             if (!pullRequest)
-                                pullRequest = yield event.repository.CreatePullRequestAsync('PR Title', event.ref);
+                                pullRequest = yield event.repository.CreatePullRequestAsync(event.ref);
                             for (let commit of event.commits) {
                                 // There are issues linked in this commit
                                 if (commit.IsIssueMentioned()) {

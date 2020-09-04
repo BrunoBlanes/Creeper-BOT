@@ -44,7 +44,11 @@ class Azure {
 }
 exports.Azure = Azure;
 class Validator {
-    // Validades signed webhooks from GitHub
+    /**
+     * Validades signed webhooks from GitHub.
+     * @param payload The data to be validaded.
+     * @param sig The GitHub signature provided as header 'x-hub-signature'.
+     */
     static ValidateSecretAsync(payload, sig) {
         return __awaiter(this, void 0, void 0, function* () {
             let secret = yield client.getSecret("GitHub-Secret");
