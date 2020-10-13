@@ -28,7 +28,7 @@
 	"dependencies": {
 		"@azure/identity": "^1.1.0",
 		"@azure/keyvault-secrets": "^4.1.0",
-		"@octokit/auth-app": "^2.4.15",
+		"@octokit/auth-app": "^2.5.0",
 		"@octokit/core": "^3.1.2",
 		"crypto": "^1.0.1"
 	},

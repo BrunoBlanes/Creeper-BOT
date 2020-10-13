@@ -1,23 +1,23 @@
+import { createServer, IncomingMessage, ServerResponse } from 'http';
 import { Card, Project, Column } from './GitHubApi/Project';
 import { PullRequest } from './GitHubApi/PullRequest';
 import { Azure, Validator } from './Services/Azure';
 import { EventPayload } from './GitHubApi/Webhook';
 import { Milestone } from './GitHubApi/Milestone';
 import { Issue, Label } from './GitHubApi/Issue';
-import * as HttpServer from 'http';
 
 Azure.SetPrivateSecret();
 
-HttpServer.createServer(function (req, res) {
+createServer((request: IncomingMessage, response: ServerResponse) => {
 
 	// Only accept POST requests
-	if (req.method == 'POST') {
-		let body: string;
-		req.on('data', (chunk: string) => { body += chunk; });
-		req.on('end', async () => {
+	if (request.method === 'POST') {
+		let body: string = '';
+		request.on('data', (chunk: string | Buffer) => { body += chunk.toString(); });
+		request.on('end', async () => {
 
 			// Validates webhook secret and reject if invalid
-			if (await Validator.ValidateSecretAsync(body, req.rawHeaders['x-hub-signature'])) {
+			if (await Validator.ValidateSecretAsync(body, request.headers['x-hub-signature'].toString())) {
 
 				// Parse as json
 				let event: EventPayload = JSON.parse(body);
@@ -29,7 +29,7 @@ HttpServer.createServer(function (req, res) {
 
 					// Handle issue events
 					// https://docs.github.com/en/developers/webhooks-and-events/webhook-events-and-payloads#issues
-					if (req.rawHeaders['x-github-event'] === 'issues') {
+					if (request.rawHeaders['x-github-event'] === 'issues') {
 						let issue: Issue = event.issue;
 
 						// New issue opened event
@@ -87,7 +87,7 @@ HttpServer.createServer(function (req, res) {
 
 					// Handle project cards events
 					// https://docs.github.com/en/developers/webhooks-and-events/webhook-events-and-payloads#project_card
-					else if (req.rawHeaders['x-github-event'] === 'project_card') {
+					else if (request.rawHeaders['x-github-event'] === 'project_card') {
 						let card: Card = event.project_card;
 
 						// Card is not a note
@@ -199,7 +199,7 @@ HttpServer.createServer(function (req, res) {
 
 					// Handle push events
 					// https://docs.github.com/en/developers/webhooks-and-events/webhook-events-and-payloads#push
-					else if (req.rawHeaders['x-github-event'] == 'push') {
+					else if (request.rawHeaders['x-github-event'] == 'push') {
 
 						// Don't run if this push is not to one of the branches defined below
 						if (['hotfix', 'release', 'feature', 'development'].some(branch => event.ref.indexOf(branch) !== -1)) {
@@ -249,21 +249,22 @@ HttpServer.createServer(function (req, res) {
 
 					// Handle pull request events
 					// https://docs.github.com/en/developers/webhooks-and-events/webhook-events-and-payloads#pull_request
-					else if (req.rawHeaders['x-github-event'] === 'pull_request') {
+					else if (request.rawHeaders['x-github-event'] === 'pull_request') {
 					}
 				}
-			}
-		});
 
-		res.end();
+				response.end();
+			}
+
+			response.writeHead(401, { 'Content-Type': 'text/plain' });
+			response.write('Failed GitHub Signature validation.');
+			response.end();
+		});
 	}
 
 	else {
-		res.statusCode = 200;
-		res.setHeader('Content-Type', 'text/html');
-		res.write(
-			'<p>Creeper-bot is a bot created by Bruno Blanes to automate his personal GitHub account.' +
-			'<p>You can find more about him at <a href="https://github.com/BrunoBlanes/Creeper-bot/">https://github.com/BrunoBlanes/Creeper-bot/</a>.', 'text/html; charset=utf-8');
-		res.end();
+		response.writeHead(200, { 'Content-Type': 'text/html' });
+		response.write('<p>Creeper-bot is a bot created by Bruno Blanes to automate his personal GitHub account.<p>You can find more about him at <a href="https://github.com/BrunoBlanes/Creeper-bot/">https://github.com/BrunoBlanes/Creeper-bot/</a>.');
+		response.end();
 	}
-}).listen(process.env.port || 1337);
+}).listen(process.env.port);
