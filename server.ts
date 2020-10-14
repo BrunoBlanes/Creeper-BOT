@@ -25,11 +25,11 @@ createServer((request: IncomingMessage, response: ServerResponse) => {
 				let owner: string = event.repository.owner.login;
 
 				// Event is related to the 'Average CRM' repo
-				if (repo === 'Average CRM') {
+				if (repo === 'Average-CRM') {
 
 					// Handle issue events
 					// https://docs.github.com/en/developers/webhooks-and-events/webhook-events-and-payloads#issues
-					if (request.rawHeaders['x-github-event'] === 'issues') {
+					if (request.headers['x-github-event'].toString() === 'issues') {
 						let issue: Issue = event.issue;
 
 						// New issue opened event
@@ -87,7 +87,7 @@ createServer((request: IncomingMessage, response: ServerResponse) => {
 
 					// Handle project cards events
 					// https://docs.github.com/en/developers/webhooks-and-events/webhook-events-and-payloads#project_card
-					else if (request.rawHeaders['x-github-event'] === 'project_card') {
+					else if (request.headers['x-github-event'].toString() === 'project_card') {
 						let card: Card = event.project_card;
 
 						// Card is not a note
@@ -199,7 +199,7 @@ createServer((request: IncomingMessage, response: ServerResponse) => {
 
 					// Handle push events
 					// https://docs.github.com/en/developers/webhooks-and-events/webhook-events-and-payloads#push
-					else if (request.rawHeaders['x-github-event'] == 'push') {
+					else if (request.headers['x-github-event'].toString() === 'push') {
 
 						// Don't run if this push is not to one of the branches defined below
 						if (['hotfix', 'release', 'feature', 'development'].some(branch => event.ref.indexOf(branch) !== -1)) {
@@ -249,16 +249,19 @@ createServer((request: IncomingMessage, response: ServerResponse) => {
 
 					// Handle pull request events
 					// https://docs.github.com/en/developers/webhooks-and-events/webhook-events-and-payloads#pull_request
-					else if (request.rawHeaders['x-github-event'] === 'pull_request') {
+					else if (request.headers['x-github-event'].toString() === 'pull_request') {
 					}
 				}
 
 				response.end();
 			}
 
-			response.writeHead(401, { 'Content-Type': 'text/plain' });
-			response.write('Failed GitHub Signature validation.');
-			response.end();
+			else {
+				// GitHub Signature validation failed
+				response.writeHead(401, { 'Content-Type': 'text/plain' });
+				response.write('Failed GitHub Signature validation.');
+				response.end();
+			}
 		});
 	}
 
