@@ -20,9 +20,9 @@ createServer((request: IncomingMessage, response: ServerResponse) => {
 			if (await Validator.ValidateSecretAsync(body, request.headers['x-hub-signature'].toString())) {
 
 				// Parse as json
-				let event: EventPayload = JSON.parse(body);
-				let repo: string = event.repository.name;
+				let event: EventPayload = new EventPayload(JSON.parse(body));
 				let owner: string = event.repository.owner.login;
+				let repo: string = event.repository.name;
 
 				// Event is related to the 'Average CRM' repo
 				if (repo === 'Average-CRM') {
