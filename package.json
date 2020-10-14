@@ -28,13 +28,13 @@
 	"dependencies": {
 		"@azure/identity": "^1.1.0",
 		"@azure/keyvault-secrets": "^4.1.0",
-		"@octokit/auth-app": "^2.5.0",
+		"@octokit/auth-app": "^2.6.0",
 		"@octokit/core": "^3.1.2",
 		"crypto": "^1.0.1"
 	},
 	"devDependencies": {
 		"@types/jsonwebtoken": "^8.5.0",
-		"@types/node": "^8.10.63",
+		"@types/node": "^8.10.64",
 		"typescript": "^3.2.2"
 	},
 	"engines": {
