@@ -7,7 +7,7 @@ import { Issue, Label } from './GitHubApi/Issue';
 import { Validator } from './Services/Azure';
 import { Octokit } from './Services/Octokit';
 
-createServer(async (request: IncomingMessage, response: ServerResponse) => {
+createServer((request: IncomingMessage, response: ServerResponse) => {
 
 	// Only accept POST requests
 	if (request.method === 'POST') {
