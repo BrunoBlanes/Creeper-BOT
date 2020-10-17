@@ -1,27 +1,43 @@
 {
 	"name": "creeper-bot",
-	"version": "0.1.0",
-	"description": "Creeper-Bot",
-	"main": "server.js",
-	"author": "Bruno Blanes",
+	"version": "1.0.0",
+	"description": "Creeper-bot",
+	"scripts": {
+		"build": "tsc --build",
+		"clean": "tsc --build --clean",
+		"start": "node server"
+	},
+	"author": {
+		"name": "Bruno Blanes"
+	},
+	"license": "ISC",
+	"homepage": "https://github.com/BrunoBlanes/GitHub-Bot#readme",
 	"repository": {
 		"type": "git",
 		"url": "git+https://github.com/BrunoBlanes/GitHub-Bot.git"
 	},
 	"keywords": [
-		"Bot"
+		"Bot",
+		"TypeScript",
+		"GitHub",
+		"API"
 	],
-	"license": "ISC",
 	"bugs": {
 		"url": "https://github.com/BrunoBlanes/GitHub-Bot/issues"
 	},
-	"homepage": "https://github.com/BrunoBlanes/GitHub-Bot#readme",
 	"dependencies": {
-		"@azure/identity": "^1.0.3",
-		"@azure/keyvault-secrets": "^4.0.4",
-		"crypto": "^1.0.1",
-		"jsonwebtoken": "^8.5.1",
-		"request": "^2.88.2",
-		"request-promise": "^4.2.5"
+		"@azure/identity": "^1.1.0",
+		"@azure/keyvault-secrets": "^4.1.0",
+		"@octokit/auth-app": "^2.6.0",
+		"@octokit/core": "^3.1.2",
+		"crypto": "^1.0.1"
+	},
+	"devDependencies": {
+		"@types/jsonwebtoken": "^8.5.0",
+		"@types/node": "^8.10.64",
+		"typescript": "^3.2.2"
+	},
+	"engines": {
+		"node": "^12.18.2"
 	}
 }
