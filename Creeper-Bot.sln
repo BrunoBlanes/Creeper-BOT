@@ -7,7 +7,8 @@ Project("{9092AA53-FB77-4645-B42D-1CCCA6BD08BD}") = "Creeper-bot", "Creeper-bot.
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{675FC34B-39C7-404A-9707-3A55347AE66B}"
 	ProjectSection(SolutionItems) = preProject
-		.azure\pipelines\azure-devops-deploy.yaml = .azure\pipelines\azure-devops-deploy.yaml
+		.azure\pipelines\deploy-pipeline.yaml = .azure\pipelines\deploy-pipeline.yaml
+		.azure\pipelines\release-pipeline.yaml = .azure\pipelines\release-pipeline.yaml
 	EndProjectSection
 EndProject
 Global
