@@ -19,12 +19,12 @@ createServer((request: IncomingMessage, response: ServerResponse) => {
 			// Validates webhook secret and reject if invalid
 			if (await Validator.ValidateSecretAsync(body, request.headers['x-hub-signature'].toString())) {
 
-				// Parse as json
+				// Parse request body as json and set aliases
 				let event: EventPayload = new EventPayload(JSON.parse(body));
 				let owner: string = event.repository.owner.login;
 				let repo: string = event.repository.name;
 
-				// Create Octokit client
+				// Create Octokit client with the current installation id
 				await Octokit.SetClientAsync(event.installation.id);
 
 				// Event is related to the 'Average CRM' repo
@@ -42,7 +42,7 @@ createServer((request: IncomingMessage, response: ServerResponse) => {
 							await issue.AddAssigneesAsync(owner, repo, ['BrunoBlanes']);
 
 							// No milestone set
-							if (!issue.milestone) {
+							if (issue.milestone == null) {
 								await issue.AddLabelsAsync(owner, repo, ['Triage']);
 							}
 
@@ -94,17 +94,16 @@ createServer((request: IncomingMessage, response: ServerResponse) => {
 						let card: Card = event.project_card;
 
 						// Card is not a note
-						if (card.content_url) {
+						if (card.content_url != null) {
 
 							// Card moved event
 							if (event.action === 'moved') {
 
 								// Content is an issue
 								if (card.IsContentAnIssue()) {
-									let getMilestonesTask: Promise<Milestone[]> = event.repository.ListMilestonesAsync();
 									let issue: Issue = await event.repository.GetIssueAsync(card.GetContentId());
 									let columnName: string = (await card.GetColumnAsync()).name;
-									let pullRequest: PullRequest;
+									let pullRequest: PullRequest | null | undefined;
 									let labels: string[];
 
 									// Look for an open pull request from this user
@@ -117,73 +116,95 @@ createServer((request: IncomingMessage, response: ServerResponse) => {
 
 									// Moved to 'Triage'
 									if (columnName === 'Triage') {
-										issue.labels.forEach(label => {
+										issue.labels.forEach((label: Label) => {
 											if (label.name === 'Working'
 												|| label.name === 'Fixed'
 												|| label.name === 'Complete'
 												|| label.name === 'Awaiting PR') {
 												issue.labels.splice(issue.labels.indexOf(label), 1);
-											} else {
+											}
+
+											else {
 												labels.push(label.name);
 											}
 										});
 
-										if (!issue.labels.some(x => x.name === 'Triage')) labels.push('Triage');
+										if (issue.labels.some((label: Label) => label.name === 'Triage') === false) {
+											labels.push('Triage');
+										}
+
 										await issue.UpdateAsync(owner, repo, labels, -1);
-										if (pullRequest) await pullRequest.RemoveIssueReferenceAsync(owner, repo, issue);
+
+										if (pullRequest instanceof PullRequest) {
+											await pullRequest.RemoveIssueReferenceAsync(owner, repo, issue);
+										}
 									}
 
 									// Moved to 'In progess'
 									else if (columnName === 'In progress') {
-										issue.labels.forEach(label => {
+										issue.labels.forEach((label: Label) => {
 											if (label.name === 'Triage'
 												|| label.name === 'Fixed'
 												|| label.name === 'Complete'
 												|| label.name === 'Awaiting PR') {
 												issue.labels.splice(issue.labels.indexOf(label), 1);
-											} else {
+											}
+
+											else {
 												labels.push(label.name);
 											}
 										});
 
-										if (!issue.labels.some(x => x.name === 'Working')) labels.push('Working');
+										if (issue.labels.some((label: Label) => label.name === 'Working') === false) {
+											labels.push('Working');
+										}
+
 										await issue.UpdateAsync(owner, repo, labels);
-										if (pullRequest) await pullRequest.RemoveIssueReferenceAsync(owner, repo, issue);
+
+										if (pullRequest instanceof PullRequest) {
+											await pullRequest.RemoveIssueReferenceAsync(owner, repo, issue);
+										}
 									}
 
 									// Moved to 'Done'
 									else if (columnName === 'Done') {
-										issue.labels.forEach(label => {
+										issue.labels.forEach((label: Label) => {
 											if (label.name === 'Triage'
 												|| label.name === 'Fixed'
 												|| label.name === 'Working'
 												|| label.name === 'Complete') {
 												issue.labels.splice(issue.labels.indexOf(label), 1);
-											} else {
+											}
+
+											else {
 												labels.push(label.name);
 											}
 										});
 
-										if (!issue.labels.some(x => x.name === 'Awaiting PR')) labels.push('Awaiting PR');
+										if (issue.labels.some((label: Label) => label.name === 'Awaiting PR') === false) {
+											labels.push('Awaiting PR');
+										}
+
 										await issue.UpdateAsync(owner, repo, labels);
 									}
 
 									// Moved to a milestone column
-									else if ((await getMilestonesTask).some(milestone => milestone.title === columnName)) {
-										issue.labels.forEach(label => {
+									else {
+										let milestones: Milestone[] = await event.repository.ListMilestonesAsync();
+
+										issue.labels.forEach((label: Label) => {
 											if (label.name === 'Triage'
 												|| label.name === 'Fixed'
 												|| label.name === 'Working'
 												|| label.name === 'Complete'
 												|| label.name === 'Awaiting PR') {
 												issue.labels.splice(issue.labels.indexOf(label), 1);
-											} else {
+											}
+
+											else {
 												labels.push(label.name);
 											}
 										});
-
-										// Get the task values
-										let milestones: Milestone[] = await getMilestonesTask;
 
 										// Add milestone to issue
 										for (let milestone of milestones) {
@@ -193,7 +214,9 @@ createServer((request: IncomingMessage, response: ServerResponse) => {
 											}
 										}
 
-										if (pullRequest) await pullRequest.RemoveIssueReferenceAsync(owner, repo, issue);
+										if (pullRequest instanceof PullRequest) {
+											await pullRequest.RemoveIssueReferenceAsync(owner, repo, issue);
+										}
 									}
 								}
 							}
@@ -203,10 +226,11 @@ createServer((request: IncomingMessage, response: ServerResponse) => {
 					// Handle push events
 					// https://docs.github.com/en/developers/webhooks-and-events/webhook-events-and-payloads#push
 					else if (request.headers['x-github-event'].toString() === 'push') {
+						let branches: string[] = ['hotfix', 'release', 'feature', 'development'];
 
 						// Don't run if this push is not to one of the branches defined below
-						if (['hotfix', 'release', 'feature', 'development'].some(branch => event.ref.indexOf(branch) !== -1)) {
-							let pullRequest: PullRequest;
+						if (branches.some((branch: string) => event.ref.indexOf(branch) !== -1)) {
+							let pullRequest: PullRequest | null | undefined;
 
 							// Look for an open pull request from this user
 							for (let pr of await event.repository.ListPullRequestsAsync()) {
@@ -217,7 +241,9 @@ createServer((request: IncomingMessage, response: ServerResponse) => {
 							}
 
 							// Create a new pull request if none was found for this user
-							if (!pullRequest) pullRequest = await event.repository.CreatePullRequestAsync(event.ref);
+							if (pullRequest == null) {
+								pullRequest = await event.repository.CreatePullRequestAsync(event.ref);
+							}
 
 							for (let commit of event.commits) {
 
@@ -225,7 +251,7 @@ createServer((request: IncomingMessage, response: ServerResponse) => {
 								if (commit.IsIssueMentioned()) {
 
 									// Move resolved issues' project card to 'Done' column
-									commit.GetMentions().forEach(async mention => {
+									commit.GetMentions().forEach(async (mention: [number, boolean]) => {
 										let issue: Issue = await event.repository.GetIssueAsync(mention[0]);
 										let project: Project = await issue.GetProjectAsync(owner, repo);
 										let card: Card = await issue.GetProjectCardAsync(owner, repo);
@@ -236,14 +262,16 @@ createServer((request: IncomingMessage, response: ServerResponse) => {
 											column = await project.GetColumnAsync('Done');
 
 											// Add a reference to this issue in this user's pull request
-											if (pullRequest !== null) await pullRequest.AddIssueReferenceAsync(owner, repo, issue);
+											if (pullRequest instanceof PullRequest) {
+												await pullRequest.AddIssueReferenceAsync(owner, repo, issue);
+											}
 										}
 
 										// Issue is not resolved
 										else column = await project.GetColumnAsync('In progress');
 
 										// Move project card
-										card.MoveAsync(column);
+										await card.MoveAsync(column);
 									});
 								}
 							}
@@ -268,9 +296,15 @@ createServer((request: IncomingMessage, response: ServerResponse) => {
 		});
 	}
 
-	else {
+	else if (request.method === 'GET') {
 		response.writeHead(200, { 'Content-Type': 'text/html' });
 		response.write('<p>Creeper-bot is a bot created by Bruno Blanes to automate his personal GitHub account.<p>You can find more about him at <a href="https://github.com/BrunoBlanes/Creeper-bot/">https://github.com/BrunoBlanes/Creeper-bot/</a>.');
+		response.end();
+	}
+
+	else {
+		response.writeHead(401, { 'Content-Type': 'text/plain' });
+		response.write('This server only accepts "POST" requests from GitHub.');
 		response.end();
 	}
 }).listen(process.env.port);
