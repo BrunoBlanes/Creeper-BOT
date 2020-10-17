@@ -6,9 +6,15 @@ const credential = new DefaultAzureCredential();
 const client = new SecretClient('https://Creeper-Bot-KeyVault.vault.azure.net', credential);
 
 export class Azure {
+	private static privateKey: string | undefined;
 
+	/* Returns my GitHub private key. */
 	public static async GetPrivateKeyAsync(): Promise<string> {
-		return (await client.getSecret("GitHub-PrivateKey")).value;
+		if (this.privateKey === undefined) {
+			this.privateKey = (await client.getSecret("GitHub-PrivateKey")).value;
+		}
+
+		return this.privateKey;
 	}
 }
 
