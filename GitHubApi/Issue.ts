@@ -1,5 +1,5 @@
 import { Project, Column, Card } from './Project';
-import { octokit } from '../Services/Octokit';
+import { Octokit } from '../Services/Octokit';
 import { Milestone } from './Milestone';
 import { User } from './User';
 
@@ -12,7 +12,7 @@ export class Issue {
 	 * @param issue
 	 */
 	public static async GetAsync(owner: string, repo: string, number: number): Promise<Issue> {
-		let response = await octokit.request('GET /repos/:owner/:repo/issues/:issue_number', {
+		let response = await Octokit.Client.request('GET /repos/:owner/:repo/issues/:issue_number', {
 			owner: owner,
 			repo: repo,
 			issue_number: number
@@ -33,7 +33,7 @@ export class Issue {
 	 * @param labels
 	 */
 	public async AddLabelsAsync(owner: string, repo: string, labels: Array<string>): Promise<void> {
-		let response = await octokit.request('POST /repos/:owner/:repo/issues/:issue_number/labels', {
+		let response = await Octokit.Client.request('POST /repos/:owner/:repo/issues/:issue_number/labels', {
 			owner: owner,
 			repo: repo,
 			issue_number: this.number,
@@ -56,8 +56,8 @@ export class Issue {
 	public async AddAssigneesAsync(owner: string, repo: string, assignees: Array<string>): Promise<void> {
 		if (assignees.length > 10) throw new Error('Maximum assignees allowed is 10.');
 		else {
-			assignees.forEach(async (assignee: string) => {
-				let response = await octokit.request('GET /repos/:owner/:repo/assignees/:assignee', {
+			for (let assignee of assignees) {
+				let response = await Octokit.Client.request('GET /repos/:owner/:repo/assignees/:assignee', {
 					owner: owner,
 					repo: repo,
 					assignee: assignee
@@ -72,11 +72,11 @@ export class Issue {
 					assignees.splice(assignees.indexOf(assignee), 1);
 					console.error(`Could not check if user "${assignee}" has permission to be assigned to issue ${this.number} of repository "${repo}".\n Octokit returned error ${response.status}.`);
 				}
-			});
+			}
 		}
 
 		if (assignees.length > 0) {
-			let response = await octokit.request('POST /repos/:owner/:repo/issues/:issue_number/assignees', {
+			let response = await Octokit.Client.request('POST /repos/:owner/:repo/issues/:issue_number/assignees', {
 				owner: owner,
 				repo: repo,
 				issue_number: this.number,
@@ -131,7 +131,7 @@ export class Issue {
 			columnId = (await (await this.GetProjectAsync(owner, repo)).GetColumnAsync(this.milestone.title)).id;
 		else
 			columnId = (await (await this.GetProjectAsync(owner, repo)).GetColumnAsync()).id;
-		let response = await octokit.request('POST /projects/columns/:column_id/cards', {
+		let response = await Octokit.Client.request('POST /projects/columns/:column_id/cards', {
 			column_id: columnId,
 			content_id: this.id,
 			content_type: 'Issue',
@@ -197,7 +197,7 @@ export class Issue {
 	 * Set to -1 to remove the current milestone. If ommited, it stays unchanged.
 	 */
 	public async UpdateAsync(owner: string, repo: string, labels: string[], milestone: number = 0): Promise<void> {
-		let response = await octokit.request('PATCH /repos/:owner/:repo/issues/:issue_number', {
+		let response = await Octokit.Client.request('PATCH /repos/:owner/:repo/issues/:issue_number', {
 			owner: owner,
 			repo: repo,
 			issue_number: this.number,

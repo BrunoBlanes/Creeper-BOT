@@ -1,4 +1,4 @@
-import { octokit } from '../Services/Octokit';
+import { Octokit } from '../Services/Octokit';
 import { User } from './User';
 
 export class Milestone {	
@@ -10,7 +10,7 @@ export class Milestone {
 	 * @param state
 	 */
 	public static async ListAsync(owner: string, repo: string, state: 'open' | 'closed' | 'all' = 'open'): Promise<Milestone[]> {
-		let response = await octokit.request('GET /repos/:owner/:repo/milestones', {
+		let response = await Octokit.Client.request('GET /repos/:owner/:repo/milestones', {
 			owner: owner,
 			repo: repo,
 			state: state

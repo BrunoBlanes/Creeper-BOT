@@ -1,4 +1,4 @@
-import { octokit } from '../Services/Octokit';
+import { Octokit } from '../Services/Octokit';
 
 export class Reference {
 	/**
@@ -9,7 +9,7 @@ export class Reference {
 	 * @param ref
 	 */
 	public static async ListAsync(owner: string, repo: string, ref: string): Promise<Reference[]> {
-		let response = await octokit.request('GET /repos/:owner/:repo/git/matching-refs/:ref', {
+		let response = await Octokit.Client.request('GET /repos/:owner/:repo/git/matching-refs/:ref', {
 			owner: owner,
 			repo: repo,
 			ref: ref
@@ -28,7 +28,7 @@ export class Reference {
 	 * @param sha
 	 */
 	public static async CreateAsync(owner: string, repo: string, refName: string, sha: string): Promise<Reference> {
-		let response = await octokit.request('POST /repos/:owner/:repo/git/refs', {
+		let response = await Octokit.Client.request('POST /repos/:owner/:repo/git/refs', {
 			owner: owner,
 			repo: repo,
 			ref: refName,

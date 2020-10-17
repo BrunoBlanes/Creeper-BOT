@@ -1,4 +1,4 @@
-import { octokit } from '../Services/Octokit';
+import { Octokit } from '../Services/Octokit';
 import { User } from './User';
 
 export class Release {
@@ -12,7 +12,7 @@ export class Release {
 	 * @param prerelease
 	 */
 	public static async CreateAsync(owner: string, repo: string, name: string, draft: boolean = false, prerelease: boolean = false): Promise<Release> {
-		let response = await octokit.request('POST /repos/:owner/:repo/releases', {
+		let response = await Octokit.Client.request('POST /repos/:owner/:repo/releases', {
 			owner: owner,
 			repo: repo,
 			tag_name: name,
@@ -32,7 +32,7 @@ export class Release {
 	 * @param repo
 	 */
 	public static async ListAsync(owner: string, repo: string): Promise<Release[]> {
-		let response = await octokit.request('GET /repos/:owner/:repo/releases', {
+		let response = await Octokit.Client.request('GET /repos/:owner/:repo/releases', {
 			owner: owner,
 			repo: repo
 		});

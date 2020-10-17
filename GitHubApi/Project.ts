@@ -1,4 +1,4 @@
-import { octokit } from '../Services/Octokit';
+import { Octokit } from '../Services/Octokit';
 import { User } from './User';
 
 export class Project {
@@ -8,7 +8,7 @@ export class Project {
 	 * @param id
 	 */
 	public static async GetAsync(id: number): Promise<Project> {
-		let response = await octokit.request('GET /projects/:project_id', {
+		let response = await Octokit.Client.request('GET /projects/:project_id', {
 			project_id: id,
 			mediaType: {
 				previews: [
@@ -31,7 +31,7 @@ export class Project {
 	 * @param state
 	 */
 	public static async ListAsync(owner: string, repo: string, state: 'open' | 'closed' | 'all' = 'open'): Promise<Project[]> {
-		let response = await octokit.request('GET /repos/:owner/:repo/projects', {
+		let response = await Octokit.Client.request('GET /repos/:owner/:repo/projects', {
 			owner: owner,
 			repo: repo,
 			state: state,
@@ -67,7 +67,7 @@ export class Project {
 
 		if (param && typeof param == 'number') {
 			// Get the column at the specified index or the first one if not specified
-			response = await octokit.request('GET /projects/:project_id/columns', {
+			response = await Octokit.Client.request('GET /projects/:project_id/columns', {
 				project_id: this.id,
 				per_page: param as number ?? 1,
 				mediaType: {
@@ -80,7 +80,7 @@ export class Project {
 			if (response.status === 200) return response.data[0] as unknown as Column;
 		} else {
 			// Get all project columns then returns the one that matches the given name
-			response = await octokit.request('GET /projects/:project_id/columns', {
+			response = await Octokit.Client.request('GET /projects/:project_id/columns', {
 				project_id: this.id,
 				mediaType: {
 					previews: [
@@ -111,7 +111,7 @@ export class Column {
 	 * Defaults to "not_archived" if no value is specified.
 	 */
 	public async ListCardsAsync(state: 'all' | 'archived' | 'not_archived' = 'not_archived'): Promise<Card[]> {
-		let response = await octokit.request('GET /projects/columns/:column_id/cards', {
+		let response = await Octokit.Client.request('GET /projects/columns/:column_id/cards', {
 			column_id: this.id,
 			archived_state: state,
 			mediaType: {
@@ -133,7 +133,7 @@ export class Card {
 	 * @param column The column to move this card to.
 	 */
 	public async MoveAsync(column: Column): Promise<void> {
-		let response = await octokit.request('POST /projects/columns/cards/:card_id/moves', {
+		let response = await Octokit.Client.request('POST /projects/columns/cards/:card_id/moves', {
 			card_id: this.id,
 			position: 'bottom',
 			column_id: column.id,
@@ -152,7 +152,7 @@ export class Card {
 	 * https://docs.github.com/en/rest/reference/projects#delete-a-project-card
 	 */
 	public async DeleteAsync(): Promise<void> {
-		let response = await octokit.request('DELETE /projects/columns/cards/:card_id', {
+		let response = await Octokit.Client.request('DELETE /projects/columns/cards/:card_id', {
 			card_id: this.id,
 			mediaType: {
 				previews: [
@@ -169,7 +169,7 @@ export class Card {
 	 * https://docs.github.com/en/rest/reference/projects#get-a-project-column
 	 */
 	public async GetColumnAsync(): Promise<Column> {
-		let response = await octokit.request('GET /projects/columns/:column_id', {
+		let response = await Octokit.Client.request('GET /projects/columns/:column_id', {
 			column_id: this.column_id,
 			mediaType: {
 				previews: [

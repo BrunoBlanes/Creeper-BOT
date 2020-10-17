@@ -21,12 +21,17 @@ export class EventPayload {
 	}
 }
 
+export interface Installation {
+	id: number;
+	node_id: string;
+}
+
 export interface EventPayload {
 	action: string;
 	sender: User;
 	repository: Repository;
 	organization: User;
-	installation: any;
+	installation: Installation;
 	issue?: Issue;
 	label?: Label;
 	project_card?: Card;

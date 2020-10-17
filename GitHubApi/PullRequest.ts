@@ -1,4 +1,4 @@
-import { octokit } from '../Services/Octokit';
+import { Octokit } from '../Services/Octokit';
 import { Repository } from './Repository';
 import { Milestone } from './Milestone';
 import { Label, Issue } from './Issue';
@@ -17,7 +17,7 @@ export class PullRequest {
 	 * @param repo
 	 */
 	public static async ListAsync(owner: string, repo: string, state: 'open' | 'closed' | 'all'): Promise<PullRequest[]> {
-		let response = await octokit.request('GET /repos/:owner/:repo/pulls', {
+		let response = await Octokit.Client.request('GET /repos/:owner/:repo/pulls', {
 			owner: owner,
 			repo: repo,
 			state: state
@@ -37,7 +37,7 @@ export class PullRequest {
 	 * @param base
 	 */
 	public static async CreateAsync(owner: string, repo: string, title: string, head: string, base: string): Promise<PullRequest> {
-		let response = await octokit.request('POST /repos/:owner/:repo/pulls', {
+		let response = await Octokit.Client.request('POST /repos/:owner/:repo/pulls', {
 			owner: owner,
 			repo: repo,
 			title: title,
@@ -60,7 +60,7 @@ export class PullRequest {
 	 * @param base
 	 */
 	public async UpdateAsync(owner: string, repo: string, title?: string, body?: string, state?: 'open' | 'closed', base?: string): Promise<void> {
-		let response = await octokit.request('PATCH /repos/:owner/:repo/pulls/:pull_number', {
+		let response = await Octokit.Client.request('PATCH /repos/:owner/:repo/pulls/:pull_number', {
 			owner: owner,
 			repo: repo,
 			pull_number: this.id,

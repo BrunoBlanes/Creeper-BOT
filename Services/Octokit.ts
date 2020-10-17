@@ -1,16 +1,30 @@
+import { Octokit as HttpClient } from '@octokit/core';
 import { createAppAuth } from '@octokit/auth-app';
-import { Octokit } from '@octokit/core';
 import { Azure } from './Azure';
 
-export const octokit = new Octokit({
-	authStrategy: createAppAuth,
-	auth: {
-		id: 72569,
-		privateKey: Azure.PrivateKey
-	},
-	previews: [
-		'machine-man'
-	],
-	userAgent: 'Creeper-Bot',
-	timeZone: 'America/Sao_Paulo'
-});
+export class Octokit {
+
+	public static Client: HttpClient;
+
+	public static async SetClientAsync(installationId: number): Promise<void> {
+		this.Client = new HttpClient({
+			authStrategy: createAppAuth,
+			auth: {
+				id: 72569,
+				installationId: installationId,
+				privateKey: await Azure.GetPrivateKeyAsync()
+			},
+			previews: [
+				'machine-man'
+			],
+			log: {
+				debug: console.debug,
+				info: console.info,
+				warn: console.warn,
+				error: console.error
+			},
+			userAgent: 'Creeper-Bot',
+			timeZone: 'America/Sao_Paulo'
+		});
+	}
+}

@@ -1,19 +1,19 @@
 import { createServer, IncomingMessage, ServerResponse } from 'http';
 import { Card, Project, Column } from './GitHubApi/Project';
 import { PullRequest } from './GitHubApi/PullRequest';
-import { Azure, Validator } from './Services/Azure';
 import { EventPayload } from './GitHubApi/Webhook';
 import { Milestone } from './GitHubApi/Milestone';
 import { Issue, Label } from './GitHubApi/Issue';
+import { Validator } from './Services/Azure';
+import { Octokit } from './Services/Octokit';
 
-Azure.SetPrivateSecret();
-
-createServer((request: IncomingMessage, response: ServerResponse) => {
+createServer(async (request: IncomingMessage, response: ServerResponse) => {
 
 	// Only accept POST requests
 	if (request.method === 'POST') {
 		let body: string = '';
 		request.on('data', (chunk: string | Buffer) => { body += chunk.toString(); });
+
 		request.on('end', async () => {
 
 			// Validates webhook secret and reject if invalid
@@ -23,6 +23,9 @@ createServer((request: IncomingMessage, response: ServerResponse) => {
 				let event: EventPayload = new EventPayload(JSON.parse(body));
 				let owner: string = event.repository.owner.login;
 				let repo: string = event.repository.name;
+
+				// Create Octokit client
+				await Octokit.SetClientAsync(event.installation.id);
 
 				// Event is related to the 'Average CRM' repo
 				if (repo === 'Average-CRM') {
