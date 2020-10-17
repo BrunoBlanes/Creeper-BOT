@@ -298,7 +298,7 @@ createServer((request: IncomingMessage, response: ServerResponse) => {
 
 	else if (request.method === 'GET') {
 		response.writeHead(200, { 'Content-Type': 'text/html' });
-		response.write('<p>Creeper-bot is a bot created by Bruno Blanes to automate his personal GitHub account.<p>You can find more about him at <a href="https://github.com/BrunoBlanes/Creeper-bot/">https://github.com/BrunoBlanes/Creeper-bot/</a>.');
+		response.write('<p>Creeper-bot is a bot created by Bruno Blanes to automate his personal GitHub account.<p>You can find more about him at <a href="https://github.com/BrunoBlanes/Creeper-bot/">https://github.com/BrunoBlanes/Creeper-bot/</a>.<p>v1.0.0');
 		response.end();
 	}
 
