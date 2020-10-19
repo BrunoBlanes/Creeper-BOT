@@ -1,12 +1,14 @@
-interface Array<T> {
-	/**
-	 * Appends new item to an array if not a duplicate of an already existing item, and returns the new length of the array.
-	 * @param {T} item
-	 */
-	skipDuplicatePush(item: T): number;
+declare global {
+	interface Array<T> {
+		/**
+		 * Appends new item to an array if not a duplicate of an already existing item, and returns the new length of the array.
+		 * @param {T} item
+		 */
+		skipDuplicatePush(item: T): number;
 
-	/** Returns the last item of the array. */
-	last(): T;
+		/** Returns the last item of the array. */
+		last(): T;
+	}
 }
 
 Array.prototype.skipDuplicatePush = function (item): number {
@@ -30,3 +32,5 @@ Array.prototype.skipDuplicatePush = function (item): number {
 Array.prototype.last = function (): any {
 	return this[this.length - 1];
 };
+
+export { };

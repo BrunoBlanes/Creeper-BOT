@@ -18,10 +18,22 @@ export class Issue {
 			issue_number: number
 		});
 
-		if (response.status === 200) return response.data as unknown as Issue;
-		else if (response.status === 301) throw new Error(`The issue ${number} at repository "${repo}" was permanently moved to "${response.headers.location}".`);
-		else if (response.status === 404) throw new Error(`The issue ${number} might have been transfered to or deleted from a repository you do not have read access to.`);
-		else if (response.status === 410) throw new Error(`The issue ${number} has been permanently deleted from the repository "${repo}".`);
+		if (response.status === 200) {
+			return Object.assign(new Issue(), response.data);
+		}
+
+		else if (response.status === 301) {
+			throw new Error(`The issue ${number} at repository "${repo}" was permanently moved to "${response.headers.location}".`);
+		}
+
+		else if (response.status === 404) {
+			throw new Error(`The issue ${number} might have been transfered to or deleted from a repository you do not have read access to.`);
+		}
+
+		else if (response.status === 410) {
+			throw new Error(`The issue ${number} has been permanently deleted from the repository "${repo}".`);
+		}
+
 		throw new Error(`Could not retrieve issue ${number} from repository "${repo}".\n Octokit returned error ${response.status}.`);
 	}
 
@@ -40,7 +52,10 @@ export class Issue {
 			labels: labels
 		});
 
-		if (response.status === 200) this.labels = response.data;
+		if (response.status === 200) {
+			this.labels = response.data;
+		}
+
 		throw new Error(`Could not assign list of labels to issue number ${this.number} of repository "${repo}".\n Octokit returned error ${response.status}.`);
 	}
 
@@ -83,9 +98,18 @@ export class Issue {
 				assignees: assignees
 			});
 
-			if (response.status === 201) this.assignees = response.data.assignees;
-			else throw new Error(`Could not add assignees to issue ${this.number} of repository "${repo}".\n Octokit returned error ${response.status}.`);
-		} else console.warn(`Assignees list was empty, skipping adding assignees to issue ${this.number}.`);
+			if (response.status === 201) {
+				this.assignees = response.data.assignees;
+			}
+
+			else {
+				throw new Error(`Could not add assignees to issue ${this.number} of repository "${repo}".\n Octokit returned error ${response.status}.`);
+			}
+		}
+
+		else {
+			console.warn(`Assignees list was empty, skipping adding assignees to issue ${this.number}.`);
+		}
 	}
 
 	/** 
@@ -94,7 +118,10 @@ export class Issue {
 	 * @param repo
 	 */
 	public async GetProjectAsync(owner: string, repo: string): Promise<Project> {
-		if (this.project instanceof Project) return this.project;
+		if (this.project instanceof Project) {
+			return this.project;
+		}
+
 		let projects: Project[] = await Project.ListAsync(owner, repo);
 		let project: Project;
 
@@ -114,8 +141,15 @@ export class Issue {
 	 * @param repo
 	 */
 	public async IsProjectLabelSetAsync(owner: string, repo: string): Promise<boolean> {
-		try { if (await this.GetProjectAsync(owner, repo)) return true; }
-		catch { return false; }
+		try {
+			if (await this.GetProjectAsync(owner, repo) instanceof Project) {
+				return true;
+			}
+		}
+
+		catch {
+			return false;
+		}
 	}
 
 	/**
@@ -156,7 +190,7 @@ export class Issue {
 	 * @param repo
 	 */
 	public async GetProjectCardAsync(owner: string, repo: string): Promise<Card> {
-		let columnName: string;
+		let columnName: string | null | undefined;
 
 		for (let label of this.labels) {
 			if (label.name === 'Triage') {
@@ -175,7 +209,7 @@ export class Issue {
 			}
 		}
 
-		if (!columnName) {
+		if (columnName == null) {
 			columnName = this.milestone.title;
 		}
 
@@ -210,7 +244,9 @@ export class Issue {
 			labels: labels
 		});
 
-		if (response.status !== 200) throw new Error(`Could not update labels for issue ${this.number} at "${repo}".\n Octokit returned error ${response.status}.`);
+		if (response.status !== 200) {
+			throw new Error(`Could not update labels for issue ${this.number} at "${repo}".\n Octokit returned error ${response.status}.`);
+		}
 	}
 }
 

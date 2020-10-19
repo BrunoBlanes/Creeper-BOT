@@ -4,6 +4,7 @@ import { Reference } from './Reference';
 import { Release } from './Release';
 import { Issue } from './Issue';
 import { User } from './User';
+import { Project } from './Project';
 
 export class Repository {
 	/** Return a list of milestones for the current repo. */
@@ -55,6 +56,21 @@ export class Repository {
 	/** Return a list of releases for the current repo. */
 	public async ListReleasesAsync(): Promise<Release[]> {
 		return await Release.ListAsync(this.owner.login, this.name);
+	}
+
+	/**
+	 * Return a project by name.
+	 * @param name The name of the project.
+	 */
+	public async GetProjectAsync(name: string): Promise<Project> {
+		let projects: Project[] = await Project.ListAsync(this.owner.login, this.name);
+		for (let project of projects) {
+			if (project.name === name) {
+				return Object.assign(new Project(), project);
+			}
+		}
+
+		return null;
 	}
 
 	/**
