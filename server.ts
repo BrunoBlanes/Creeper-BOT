@@ -66,7 +66,7 @@ createServer((request: IncomingMessage, response: ServerResponse) => {
 
 							// Project label removed
 							if (await issue.IsProjectLabelSetAsync(owner, repo) === false) {
-								let labels: string[];
+								let labels: string[] = [];
 								labels.push('Triage');
 								issue.labels.forEach(x => { labels.push(x.name); });
 								let card: Card = await issue.GetProjectCardAsync(owner, repo);
@@ -78,7 +78,7 @@ createServer((request: IncomingMessage, response: ServerResponse) => {
 						// Issue closed event
 						else if (event.action === 'closed') {
 							let label: Label;
-							let labels: string[];
+							let labels: string[] = [];
 							if (issue.labels.some(x => x.name === 'Bug')) labels.push('Fixed');
 							else labels.push('Complete');
 							if (label = issue.labels.find(x => x.name === 'Awaiting PR'))
@@ -104,7 +104,7 @@ createServer((request: IncomingMessage, response: ServerResponse) => {
 									let issue: Issue = await event.repository.GetIssueAsync(card.GetContentId());
 									let columnName: string = (await card.GetColumnAsync()).name;
 									let pullRequest: PullRequest | null | undefined;
-									let labels: string[];
+									let labels: string[] = [];
 
 									// Look for an open pull request from this user
 									for (let pr of await event.repository.ListPullRequestsAsync()) {

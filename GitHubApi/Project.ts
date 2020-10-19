@@ -17,9 +17,18 @@ export class Project {
 			}
 		});
 
-		if (response.status === 200) return response.data as unknown as Project;
-		else if (response.status === 404) throw new Error('Projects are disabled for this repository.');
-		else if (response.status === 401 || response.status === 410) throw new Error('You do not have sufficient privileges to list projects for this repository.');
+		if (response.status === 200) {
+			return response.data as unknown as Project;
+		}
+
+		else if (response.status === 404) {
+			throw new Error('Projects are disabled for this repository.');
+		}
+
+		else if (response.status === 401 || response.status === 410) {
+			throw new Error('You do not have sufficient privileges to list projects for this repository.');
+		}
+
 		throw new Error(`Could not retrieve a list of projects the repository. \n Octokit returned error ${response.status}.`);
 	}
 
@@ -42,10 +51,18 @@ export class Project {
 			}
 		});
 
-		if (response.status === 200)
+		if (response.status === 200) {
 			return response.data as unknown as Project[];
-		else if (response.status === 404) throw new Error(`Projects are disabled in the repository "${repo}".`);
-		else if (response.status === 401 || response.status === 410) throw new Error(`You do not have sufficient privileges to list projects for the repository "${repo}".`);
+		}
+
+		else if (response.status === 404) {
+			throw new Error(`Projects are disabled in the repository "${repo}".`);
+		}
+
+		else if (response.status === 401 || response.status === 410) {
+			throw new Error(`You do not have sufficient privileges to list projects for the repository "${repo}".`);
+		}
+
 		throw new Error(`Could not retrieve a list of projects for repository "${repo}" of owner "${owner}". \n Octokit returned error ${response.status}.`);
 	}
 
@@ -77,8 +94,13 @@ export class Project {
 				}
 			});
 
-			if (response.status === 200) return response.data[0] as unknown as Column;
-		} else {
+			if (response.status === 200) {
+				return response.data[0] as unknown as Column;
+			}
+
+		}
+
+		else {
 			// Get all project columns then returns the one that matches the given name
 			response = await Octokit.Client.request('GET /projects/:project_id/columns', {
 				project_id: this.id,
@@ -92,7 +114,7 @@ export class Project {
 			if (response.status === 200) {
 				for (let column of response.data) {
 					if (column.name === param as string) {
-						return column as unknown as Column;
+						return Object.assign(new Column(), column);
 					}
 				}
 			}
@@ -121,7 +143,10 @@ export class Column {
 			}
 		});
 
-		if (response.status === 200) return response.data as unknown as Card[];
+		if (response.status === 200) {
+			return response.data as unknown as Card[];
+		}
+
 		throw new Error(`Could no retrieve a list of cards for the column ${this.id}. \n Octokit returned error ${response.status}.`);
 	}
 }
@@ -144,7 +169,9 @@ export class Card {
 			}
 		});
 
-		if (response.status !== 201) throw new Error(`Could not move card ${this.id} to column "${column.name}".\n Octokit returned error ${response.status}.`);
+		if (response.status !== 201) {
+			throw new Error(`Could not move card ${this.id} to column "${column.name}".\n Octokit returned error ${response.status}.`);
+		}
 	}
 
 	/**
@@ -161,7 +188,9 @@ export class Card {
 			}
 		});
 
-		if (response.status !== 204) throw new Error(`Could not delete project card ${this.id}.\n Octokit returned error ${response.status}.`);
+		if (response.status !== 204) {
+			throw new Error(`Could not delete project card ${this.id}.\n Octokit returned error ${response.status}.`);
+		}
 	}
 
 	/**
@@ -178,7 +207,10 @@ export class Card {
 			}
 		});
 
-		if (response.status === 200) return response.data as unknown as Column;
+		if (response.status === 200) {
+			return Object.assign(new Column(), response.data);
+		}
+
 		throw new Error(`Could not retrieve column information for card ${this.id}.\n Octokit returned error ${response.status}.`);
 	}
 
@@ -192,7 +224,7 @@ export class Card {
 	/** Check if card content is an issue. */
 	public IsContentAnIssue(): boolean {
 		let splitUrl: string[] = this.content_url.split('/');
-		if (splitUrl[splitUrl.length - 2] === 'Issues') return true;
+		if (splitUrl[splitUrl.length - 2] === 'issues') return true;
 		else return false;
 	}
 
