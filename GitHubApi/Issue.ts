@@ -94,13 +94,13 @@ export class Issue {
 	 * @param repo
 	 */
 	public async GetProjectAsync(owner: string, repo: string): Promise<Project> {
-		if (this.project) return this.project;
+		if (this.project instanceof Project) return this.project;
 		let projects: Project[] = await Project.ListAsync(owner, repo);
 		let project: Project;
 
 		for (let label of this.labels) {
-			if (project = projects.find(x => x.name === label.name)) {
-				this.project = project;
+			if (project = projects.find((p: Project) => p.name === label.name)) {
+				this.project = Object.assign(new Project(), project);
 				return this.project;
 			}
 		}
@@ -125,12 +125,15 @@ export class Issue {
 	 * @param repo
 	 */
 	public async CreateProjectCardAsync(owner: string, repo: string): Promise<void> {
+		let project: Project = await this.GetProjectAsync(owner, repo);
 		let columnId: number;
 
-		if (this.milestone)
-			columnId = (await (await this.GetProjectAsync(owner, repo)).GetColumnAsync(this.milestone.title)).id;
-		else
-			columnId = (await (await this.GetProjectAsync(owner, repo)).GetColumnAsync()).id;
+		if (this.milestone != null) {
+			columnId = (await project.GetColumnAsync(this.milestone.title)).id;
+		} else {
+			columnId = (await project.GetColumnAsync()).id;
+		}
+
 		let response = await Octokit.Client.request('POST /projects/columns/:column_id/cards', {
 			column_id: columnId,
 			content_id: this.id,
@@ -142,7 +145,9 @@ export class Issue {
 			}
 		});
 
-		if (response.status !== 201) throw new Error(`Could not create card for issue ${this.id}.\n Octokit returned error ${response.status}.`);
+		if (response.status !== 201) {
+			throw new Error(`Could not create card for issue ${this.id}.\n Octokit returned error ${response.status}.`);
+		}
 	}
 
 	/**
