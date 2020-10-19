@@ -23,7 +23,10 @@ export class PullRequest {
 			state: state
 		});
 
-		if (response.status === 200) return response.data as unknown as PullRequest[];
+		if (response.status === 200) {
+			return response.data as unknown as PullRequest[];
+		}
+
 		throw new Error(`Could not retrieve a list of pull requests from repository "${repo}" of owner "${owner}".\n Octokit returned error ${response.status}.`);
 	}
 
@@ -45,7 +48,10 @@ export class PullRequest {
 			base: base
 		});
 
-		if (response.status === 201) return response.data as unknown as PullRequest;
+		if (response.status === 201) {
+			return response.data as unknown as PullRequest;
+		}
+
 		throw new Error(`Could not create a pull request from branch "${head}" into branch "${base}" on repository "${repo}" of owner "${owner}".\n Octokit returned error ${response.status}.`);
 	}
 
@@ -70,7 +76,9 @@ export class PullRequest {
 			base: base ?? this.base.label
 		});
 
-		if (response.status !== 200) throw new Error(`Could not update pull request ${this.id} from repository "${repo}" of owner "${owner}".\n Octokit returned error ${response.status}.`);
+		if (response.status !== 200) {
+			throw new Error(`Could not update pull request ${this.id} from repository "${repo}" of owner "${owner}".\n Octokit returned error ${response.status}.`);
+		}
 	}
 
 	/**

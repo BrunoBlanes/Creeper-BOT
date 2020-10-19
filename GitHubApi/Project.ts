@@ -18,7 +18,7 @@ export class Project {
 		});
 
 		if (response.status === 200) {
-			return response.data as unknown as Project;
+			return Object.assign(new Project(), response.data);
 		}
 
 		else if (response.status === 404) {
@@ -52,7 +52,11 @@ export class Project {
 		});
 
 		if (response.status === 200) {
-			return response.data as unknown as Project[];
+			let projects: Project[] = [];
+			response.data.forEach(project => {
+				projects.push(Object.assign(new Project(), project));
+			})
+			return projects;
 		}
 
 		else if (response.status === 404) {
@@ -100,7 +104,7 @@ export class Project {
 
 		}
 
-		else {
+		else if (param && typeof param == 'string') {
 			// Get all project columns then returns the one that matches the given name
 			response = await Octokit.Client.request('GET /projects/:project_id/columns', {
 				project_id: this.id,
@@ -144,7 +148,9 @@ export class Column {
 		});
 
 		if (response.status === 200) {
-			return response.data as unknown as Card[];
+			let cards: Card[] = [];
+			response.data.forEach(card => { cards.push(Object.assign(new Card(), card)); });
+			return cards;
 		}
 
 		throw new Error(`Could no retrieve a list of cards for the column ${this.id}. \n Octokit returned error ${response.status}.`);

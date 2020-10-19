@@ -54,9 +54,9 @@ createServer((request: IncomingMessage, response: ServerResponse) => {
 
 						// New label added event
 						else if (event.action === 'labeled') {
+							let project: Project = await event.repository.GetProjectAsync(event.label.name);
 
-							// Check if project label added to issue
-							if (await issue.IsProjectLabelSetAsync(owner, repo)) {
+							if (project instanceof Project) {
 								await issue.CreateProjectCardAsync(owner, repo);
 							}
 						}
@@ -120,7 +120,7 @@ createServer((request: IncomingMessage, response: ServerResponse) => {
 											if (label.name === 'Working'
 												|| label.name === 'Fixed'
 												|| label.name === 'Complete'
-												|| label.name === 'Awaiting PR') {
+												|| label.name === 'Awaiting Pull Request') {
 												issue.labels.splice(issue.labels.indexOf(label), 1);
 											}
 
@@ -146,7 +146,7 @@ createServer((request: IncomingMessage, response: ServerResponse) => {
 											if (label.name === 'Triage'
 												|| label.name === 'Fixed'
 												|| label.name === 'Complete'
-												|| label.name === 'Awaiting PR') {
+												|| label.name === 'Awaiting Pull Request') {
 												issue.labels.splice(issue.labels.indexOf(label), 1);
 											}
 
@@ -181,8 +181,8 @@ createServer((request: IncomingMessage, response: ServerResponse) => {
 											}
 										});
 
-										if (issue.labels.some((label: Label) => label.name === 'Awaiting PR') === false) {
-											labels.push('Awaiting PR');
+										if (issue.labels.some((label: Label) => label.name === 'Awaiting Pull Request') === false) {
+											labels.push('Awaiting Pull Request');
 										}
 
 										await issue.UpdateAsync(owner, repo, labels);
@@ -197,7 +197,7 @@ createServer((request: IncomingMessage, response: ServerResponse) => {
 												|| label.name === 'Fixed'
 												|| label.name === 'Working'
 												|| label.name === 'Complete'
-												|| label.name === 'Awaiting PR') {
+												|| label.name === 'Awaiting Pull Request') {
 												issue.labels.splice(issue.labels.indexOf(label), 1);
 											}
 
@@ -247,32 +247,28 @@ createServer((request: IncomingMessage, response: ServerResponse) => {
 
 							for (let commit of event.commits) {
 
-								// There are issues linked in this commit
-								if (commit.IsIssueMentioned()) {
+								// Move resolved issues' project card to 'Done' column
+								for (let mention of commit.GetMentions()) {
+									let issue: Issue = await event.repository.GetIssueAsync(mention.content_id);
+									let project: Project = await issue.GetProjectAsync(owner, repo);
+									let card: Card = await issue.GetProjectCardAsync(owner, repo);
+									let column: Column;
 
-									// Move resolved issues' project card to 'Done' column
-									commit.GetMentions().forEach(async (mention: [number, boolean]) => {
-										let issue: Issue = await event.repository.GetIssueAsync(mention[0]);
-										let project: Project = await issue.GetProjectAsync(owner, repo);
-										let card: Card = await issue.GetProjectCardAsync(owner, repo);
-										let column: Column;
+									// Issue is resolved
+									if (mention.resolved) {
+										column = await project.GetColumnAsync('Done');
 
-										// Issue is resolved
-										if (mention[1]) {
-											column = await project.GetColumnAsync('Done');
-
-											// Add a reference to this issue in this user's pull request
-											if (pullRequest instanceof PullRequest) {
-												await pullRequest.AddIssueReferenceAsync(owner, repo, issue);
-											}
+										// Add a reference to this issue in this user's pull request
+										if (pullRequest instanceof PullRequest) {
+											await pullRequest.AddIssueReferenceAsync(owner, repo, issue);
 										}
+									}
 
-										// Issue is not resolved
-										else column = await project.GetColumnAsync('In progress');
+									// Issue is not resolved
+									else column = await project.GetColumnAsync('In progress');
 
-										// Move project card
-										await card.MoveAsync(column);
-									});
+									// Move project card
+									await card.MoveAsync(column);
 								}
 							}
 						}
