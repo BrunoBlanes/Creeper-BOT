@@ -24,6 +24,7 @@ export class EventPayload {
 		}
 
 		this.pusher = jsonPayload.pusher;
+		this.before = jsonPayload.before;
 		this.ref = jsonPayload.ref;
 	}
 }
@@ -45,4 +46,5 @@ export interface EventPayload {
 	commits?: Push[];
 	pusher?: User;
 	ref?: string;
+	before?: string;
 }

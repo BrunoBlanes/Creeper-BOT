@@ -1,6 +1,5 @@
 import { createServer, IncomingMessage, ServerResponse } from 'http';
 import { Card, Project, Column } from './GitHubApi/Project';
-import { PullRequest } from './GitHubApi/PullRequest';
 import { EventPayload } from './GitHubApi/Webhook';
 import { Milestone } from './GitHubApi/Milestone';
 import { Issue, Label } from './GitHubApi/Issue';
@@ -103,20 +102,11 @@ createServer((request: IncomingMessage, response: ServerResponse) => {
 								if (card.IsContentAnIssue()) {
 									let issue: Issue = await event.repository.GetIssueAsync(card.GetContentId());
 									let columnName: string = (await card.GetColumnAsync()).name;
-									let pullRequest: PullRequest | null | undefined;
 									let labels: string[] = [];
-
-									// Look for an open pull request from this user
-									for (let pr of await event.repository.ListPullRequestsAsync()) {
-										if (pr.user.id === event.sender.id) {
-											pullRequest = pr;
-											break;
-										}
-									}
 
 									// Moved to 'Triage'
 									if (columnName === 'Triage') {
-										issue.labels.forEach((label: Label) => {
+										for (let label of issue.labels) {
 											if (label.name === 'Working'
 												|| label.name === 'Fixed'
 												|| label.name === 'Complete'
@@ -127,22 +117,18 @@ createServer((request: IncomingMessage, response: ServerResponse) => {
 											else {
 												labels.push(label.name);
 											}
-										});
+										}
 
 										if (issue.labels.some((label: Label) => label.name === 'Triage') === false) {
 											labels.push('Triage');
 										}
 
 										await issue.UpdateAsync(owner, repo, labels, -1);
-
-										if (pullRequest instanceof PullRequest) {
-											await pullRequest.RemoveIssueReferenceAsync(owner, repo, issue);
-										}
 									}
 
 									// Moved to 'In progess'
 									else if (columnName === 'In progress') {
-										issue.labels.forEach((label: Label) => {
+										for (let label of issue.labels) {
 											if (label.name === 'Triage'
 												|| label.name === 'Fixed'
 												|| label.name === 'Complete'
@@ -153,22 +139,18 @@ createServer((request: IncomingMessage, response: ServerResponse) => {
 											else {
 												labels.push(label.name);
 											}
-										});
+										}
 
 										if (issue.labels.some((label: Label) => label.name === 'Working') === false) {
 											labels.push('Working');
 										}
 
 										await issue.UpdateAsync(owner, repo, labels);
-
-										if (pullRequest instanceof PullRequest) {
-											await pullRequest.RemoveIssueReferenceAsync(owner, repo, issue);
-										}
 									}
 
 									// Moved to 'Done'
 									else if (columnName === 'Done') {
-										issue.labels.forEach((label: Label) => {
+										for (let label of issue.labels) {
 											if (label.name === 'Triage'
 												|| label.name === 'Fixed'
 												|| label.name === 'Working'
@@ -179,7 +161,7 @@ createServer((request: IncomingMessage, response: ServerResponse) => {
 											else {
 												labels.push(label.name);
 											}
-										});
+										}
 
 										if (issue.labels.some((label: Label) => label.name === 'Awaiting Pull Request') === false) {
 											labels.push('Awaiting Pull Request');
@@ -192,7 +174,7 @@ createServer((request: IncomingMessage, response: ServerResponse) => {
 									else {
 										let milestones: Milestone[] = await event.repository.ListMilestonesAsync();
 
-										issue.labels.forEach((label: Label) => {
+										for (let label of issue.labels) {
 											if (label.name === 'Triage'
 												|| label.name === 'Fixed'
 												|| label.name === 'Working'
@@ -204,7 +186,7 @@ createServer((request: IncomingMessage, response: ServerResponse) => {
 											else {
 												labels.push(label.name);
 											}
-										});
+										}
 
 										// Add milestone to issue
 										for (let milestone of milestones) {
@@ -212,10 +194,6 @@ createServer((request: IncomingMessage, response: ServerResponse) => {
 												await issue.UpdateAsync(owner, repo, labels, milestone.id);
 												break;
 											}
-										}
-
-										if (pullRequest instanceof PullRequest) {
-											await pullRequest.RemoveIssueReferenceAsync(owner, repo, issue);
 										}
 									}
 								}
@@ -226,57 +204,30 @@ createServer((request: IncomingMessage, response: ServerResponse) => {
 					// Handle push events
 					// https://docs.github.com/en/developers/webhooks-and-events/webhook-events-and-payloads#push
 					else if (request.headers['x-github-event'].toString() === 'push') {
-						let branches: string[] = ['hotfix', 'release', 'feature', 'development'];
 
-						// Don't run if this push is not to one of the branches defined below
-						if (branches.some((branch: string) => event.ref.indexOf(branch) !== -1)) {
-							let pullRequest: PullRequest | null | undefined;
+						for (let commit of event.commits) {
 
-							// Look for an open pull request from this user
-							for (let pr of await event.repository.ListPullRequestsAsync()) {
-								if (pr.user.id === event.pusher.id) {
-									pullRequest = pr;
-									break;
+							// Move resolved issues' project card to 'Done' column
+							for (let mention of commit.GetMentions()) {
+								let issue: Issue = await event.repository.GetIssueAsync(mention.content_id);
+								let project: Project = await issue.GetProjectAsync(owner, repo);
+								let card: Card = await issue.GetProjectCardAsync(owner, repo);
+								let column: Column;
+
+								// Issue is resolved
+								if (mention.resolved) {
+									column = await project.GetColumnAsync('Done');
 								}
-							}
 
-							// Create a new pull request if none was found for this user
-							if (pullRequest == null) {
-								pullRequest = await event.repository.CreatePullRequestAsync(event.ref);
-							}
-
-							for (let commit of event.commits) {
-
-								// Move resolved issues' project card to 'Done' column
-								for (let mention of commit.GetMentions()) {
-									let issue: Issue = await event.repository.GetIssueAsync(mention.content_id);
-									let project: Project = await issue.GetProjectAsync(owner, repo);
-									let card: Card = await issue.GetProjectCardAsync(owner, repo);
-									let column: Column;
-
-									// Issue is resolved
-									if (mention.resolved) {
-										column = await project.GetColumnAsync('Done');
-
-										// Add a reference to this issue in this user's pull request
-										if (pullRequest instanceof PullRequest) {
-											await pullRequest.AddIssueReferenceAsync(owner, repo, issue);
-										}
-									}
-
-									// Issue is not resolved
-									else column = await project.GetColumnAsync('In progress');
-
-									// Move project card
-									await card.MoveAsync(column);
+								// Issue is not resolved
+								else {
+									column = await project.GetColumnAsync('In progress');
 								}
+
+								// Move project card
+								await card.MoveAsync(column);
 							}
 						}
-					}
-
-					// Handle pull request events
-					// https://docs.github.com/en/developers/webhooks-and-events/webhook-events-and-payloads#pull_request
-					else if (request.headers['x-github-event'].toString() === 'pull_request') {
 					}
 				}
 
