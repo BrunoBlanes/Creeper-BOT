@@ -33,7 +33,6 @@
   <ItemGroup>
     <None Include="Creeper-Bot - Web Deploy.pubxml" />
     <Content Include="GitHubApi\Commit.ts" />
-    <Content Include="GitHubApi\PullRequest.ts" />
     <None Include="Properties\PublishProfiles\Creeper-Bot - Web Deploy.pubxml" />
     <Content Include="Services\Octokit.ts" />
     <Content Include="GitHubApi\Project.ts" />
@@ -57,12 +56,6 @@
       <SubType>Code</SubType>
     </TypeScriptCompile>
     <TypeScriptCompile Include="GitHubApi\Milestone.ts">
-      <SubType>Code</SubType>
-    </TypeScriptCompile>
-    <TypeScriptCompile Include="GitHubApi\Reference.ts">
-      <SubType>Code</SubType>
-    </TypeScriptCompile>
-    <TypeScriptCompile Include="GitHubApi\Release.ts">
       <SubType>Code</SubType>
     </TypeScriptCompile>
     <TypeScriptCompile Include="GitHubApi\Repository.ts">

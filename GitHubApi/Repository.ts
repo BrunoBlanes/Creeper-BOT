@@ -1,10 +1,7 @@
-import { PullRequest } from './PullRequest';
 import { Milestone } from './Milestone';
-import { Reference } from './Reference';
-import { Release } from './Release';
+import { Project } from './Project';
 import { Issue } from './Issue';
 import { User } from './User';
-import { Project } from './Project';
 
 export class Repository {
 	/** Return a list of milestones for the current repo. */
@@ -21,44 +18,6 @@ export class Repository {
 	}
 
 	/**
-	 * Return a list of pull requests for the current repo.
-	 * @param state The state at which to filter pull requests by. Defaults to 'open'.
-	 */
-	public async ListPullRequestsAsync(state: 'open' | 'closed' | 'all' = 'open'): Promise<PullRequest[]> {
-		return await PullRequest.ListAsync(this.owner.login, this.name, state);
-	}
-
-	/**
-	 * Return a list of references for the current repo.
-	 * @param ref A matching reference name.
-	 */
-	public async ListReferencesAsync(ref: string): Promise<Reference[]> {
-		return await Reference.ListAsync(this.owner.login, this.name, ref);
-	}
-
-	/**
-	 * Create a new reference at this repo.
-	 * @param refName String of the name of the fully qualified reference (ie: refs/heads/master). If it doesn’t start with ‘refs’ and have at least two slashes, it will be rejected.
-	 * @param sha String of the SHA1 value to set this reference to.
-	 */
-	public async CreateReferenceAsync(refName: string, sha: string): Promise<Reference> {
-		return await Reference.CreateAsync(this.owner.login, this.name, refName, sha);
-	}
-
-	/**
-	 * Create a new release on this repo.
-	 * @param name The name of the release.
-	 */
-	public async CreateReleaseAsync(name: string): Promise<Release> {
-		return await Release.CreateAsync(this.owner.login, this.name, name);
-	}
-
-	/** Return a list of releases for the current repo. */
-	public async ListReleasesAsync(): Promise<Release[]> {
-		return await Release.ListAsync(this.owner.login, this.name);
-	}
-
-	/**
 	 * Return a project by name.
 	 * @param name The name of the project.
 	 */
@@ -71,42 +30,6 @@ export class Repository {
 		}
 
 		return null;
-	}
-
-	/**
-	 * Create a pull request.
-	 * @param head The name of the branch where your changes are implemented.
-	 */
-	public async CreatePullRequestAsync(head: string): Promise<PullRequest> {
-		let branchname: string[] = head.split('/');
-
-		// Pulls from 'hotfix/*' or 'release/*' will be merged into 'master' branch
-		if (branchname[branchname.length - 2] === 'hotfix' || branchname[branchname.length - 2] === 'release') {
-			await PullRequest.CreateAsync(
-				this.owner.login,
-				this.name,
-				`Merge branch "${branchname[branchname.length - 2]}/${branchname.last()}" into "development"`,
-				head,
-				'development');
-			return await PullRequest.CreateAsync(
-				this.owner.login,
-				this.name,
-				`Merge branch "${branchname[branchname.length - 2]}/${branchname.last()}" into "master"`,
-				head,
-				'master');
-		}
-
-		// Pulls from 'feature/*' will be merged into the 'development' branch
-		else if (branchname[branchname.length - 2] === 'feature') {
-			return await PullRequest.CreateAsync(
-				this.owner.login,
-				this.name,
-				`Merge branch "feature/${branchname.last()}" into "development"`,
-				head,
-				'development');
-		}
-
-		else return null;
 	}
 }
 
