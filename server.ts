@@ -86,7 +86,7 @@ createServer((request: IncomingMessage, response: ServerResponse) => {
 							let labels: string[] = [];
 							if (issue.labels.some(x => x.name === 'Bug')) labels.push('Fixed');
 							else labels.push('Complete');
-							if (label = issue.labels.find(x => x.name === 'Awaiting PR'))
+							if (label = issue.labels.find(x => x.name === 'Awaiting Pull Request'))
 								issue.labels.splice(issue.labels.indexOf(label), 1);
 							issue.labels.forEach(x => { labels.push(x.name); });
 							await issue.UpdateAsync(owner, repo, labels);
