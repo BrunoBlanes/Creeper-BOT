@@ -53,10 +53,16 @@ createServer((request: IncomingMessage, response: ServerResponse) => {
 
 						// New label added event
 						else if (event.action === 'labeled') {
-							let project: Project = await event.repository.GetProjectAsync(event.label.name);
+							if (event.label.name === 'Database') {
+								await issue.AddLabelsAsync(owner, repo, ['Server']);
+							}
 
-							if (project instanceof Project) {
-								await issue.CreateProjectCardAsync(owner, repo);
+							else {
+								let project: Project = await event.repository.GetProjectAsync(event.label.name);
+
+								if (project instanceof Project) {
+									await issue.CreateProjectCardAsync(owner, repo);
+								}
 							}
 						}
 

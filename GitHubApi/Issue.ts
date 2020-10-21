@@ -56,7 +56,9 @@ export class Issue {
 			this.labels = response.data;
 		}
 
-		throw new Error(`Could not assign list of labels to issue number ${this.number} of repository "${repo}".\n Octokit returned error ${response.status}.`);
+		else {
+			throw new Error(`Could not assign list of labels to issue number ${this.number} of repository "${repo}".\n Octokit returned error ${response.status}.`);
+		}
 	}
 
 	/**

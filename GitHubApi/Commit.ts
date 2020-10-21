@@ -28,7 +28,7 @@ export class Push {
 				if (keywordIndex !== -1) {
 
 					// Keyword was used just before issue was mentioned
-					if ((keywordIndex + keyword.length) === match.index - 1) {
+					if ((keywordIndex + keyword.length) === (match.index - 1)) {
 						resolved = true;
 						break;
 					}
