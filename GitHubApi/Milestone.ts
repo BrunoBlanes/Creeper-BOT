@@ -16,7 +16,16 @@ export class Milestone {
 			state: state
 		});
 
-		if (response.status === 200) return response.data as unknown as Milestone[];
+		if (response.status === 200) {
+			let milestones: Milestone[] = [];
+
+			for (let milestone of response.data) {
+				milestones.push(Object.assign(new Milestone(), milestone));
+			}
+
+			return milestones;
+		}
+		
 		throw new Error(`Could not retrieve a list of milestones for repository "${repo}" of owner "${owner}"./n Octokit returned error ${response.status}.`);
 	}
 }

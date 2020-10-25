@@ -167,7 +167,7 @@ export class Issue {
 		if (this.milestone != null) {
 			columnId = (await project.GetColumnAsync(this.milestone.title)).id;
 		} else {
-			columnId = (await project.GetColumnAsync()).id;
+			columnId = (await project.GetColumnAsync('Triage')).id;
 		}
 
 		let response = await Octokit.Client.request('POST /projects/columns/:column_id/cards', {
@@ -242,7 +242,11 @@ export class Issue {
 			owner: owner,
 			repo: repo,
 			issue_number: this.number,
-			milestone: milestone === 0 ? this.milestone.number : milestone === -1 ? null : milestone,
+			milestone: ((milestone === 0)
+				? this.milestone.number
+				: ((milestone === -1)
+					? null
+					: milestone)),
 			labels: labels
 		});
 

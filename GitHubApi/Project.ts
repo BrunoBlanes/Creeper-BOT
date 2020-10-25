@@ -203,7 +203,7 @@ export class Card {
 	 * Get a project column.
 	 * https://docs.github.com/en/rest/reference/projects#get-a-project-column
 	 */
-	public async GetColumnAsync(): Promise<Column> {
+	public async GetCurrentColumnAsync(): Promise<Column> {
 		let response = await Octokit.Client.request('GET /projects/columns/:column_id', {
 			column_id: this.column_id,
 			mediaType: {
