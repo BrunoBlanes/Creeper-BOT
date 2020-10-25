@@ -44,11 +44,6 @@ createServer((request: IncomingMessage, response: ServerResponse) => {
 							if (issue.milestone == null) {
 								await issue.AddLabelsAsync(owner, repo, ['Triage']);
 							}
-
-							// Check if project label added to issue
-							if (await issue.IsProjectLabelSetAsync(owner, repo)) {
-								await issue.CreateProjectCardAsync(owner, repo);
-							}
 						}
 
 						// New label added event
@@ -60,7 +55,7 @@ createServer((request: IncomingMessage, response: ServerResponse) => {
 							else {
 								let project: Project = await event.repository.GetProjectAsync(event.label.name);
 
-								if (project instanceof Project) {
+								if (project != null) {
 									await issue.CreateProjectCardAsync(owner, repo);
 								}
 							}
@@ -107,20 +102,16 @@ createServer((request: IncomingMessage, response: ServerResponse) => {
 								// Content is an issue
 								if (card.IsContentAnIssue()) {
 									let issue: Issue = await event.repository.GetIssueAsync(card.GetContentId());
-									let columnName: string = (await card.GetColumnAsync()).name;
+									let columnName: string = (await card.GetCurrentColumnAsync()).name;
 									let labels: string[] = [];
 
 									// Moved to 'Triage'
 									if (columnName === 'Triage') {
 										for (let label of issue.labels) {
-											if (label.name === 'Working'
-												|| label.name === 'Fixed'
-												|| label.name === 'Complete'
-												|| label.name === 'Awaiting Pull Request') {
-												issue.labels.splice(issue.labels.indexOf(label), 1);
-											}
-
-											else {
+											if (label.name !== 'Working'
+												&& label.name !== 'Fixed'
+												&& label.name !== 'Complete'
+												&& label.name !== 'Awaiting Pull Request') {
 												labels.push(label.name);
 											}
 										}
@@ -135,14 +126,10 @@ createServer((request: IncomingMessage, response: ServerResponse) => {
 									// Moved to 'In progess'
 									else if (columnName === 'In progress') {
 										for (let label of issue.labels) {
-											if (label.name === 'Triage'
-												|| label.name === 'Fixed'
-												|| label.name === 'Complete'
-												|| label.name === 'Awaiting Pull Request') {
-												issue.labels.splice(issue.labels.indexOf(label), 1);
-											}
-
-											else {
+											if (label.name !== 'Triage'
+												&& label.name !== 'Fixed'
+												&& label.name !== 'Complete'
+												&& label.name !== 'Awaiting Pull Request') {
 												labels.push(label.name);
 											}
 										}
@@ -157,14 +144,10 @@ createServer((request: IncomingMessage, response: ServerResponse) => {
 									// Moved to 'Done'
 									else if (columnName === 'Done') {
 										for (let label of issue.labels) {
-											if (label.name === 'Triage'
-												|| label.name === 'Fixed'
-												|| label.name === 'Working'
-												|| label.name === 'Complete') {
-												issue.labels.splice(issue.labels.indexOf(label), 1);
-											}
-
-											else {
+											if (label.name !== 'Triage'
+												&& label.name !== 'Fixed'
+												&& label.name !== 'Working'
+												&& label.name !== 'Complete') {
 												labels.push(label.name);
 											}
 										}
@@ -181,15 +164,11 @@ createServer((request: IncomingMessage, response: ServerResponse) => {
 										let milestones: Milestone[] = await event.repository.ListMilestonesAsync();
 
 										for (let label of issue.labels) {
-											if (label.name === 'Triage'
-												|| label.name === 'Fixed'
-												|| label.name === 'Working'
-												|| label.name === 'Complete'
-												|| label.name === 'Awaiting Pull Request') {
-												issue.labels.splice(issue.labels.indexOf(label), 1);
-											}
-
-											else {
+											if (label.name !== 'Triage'
+												&& label.name !== 'Fixed'
+												&& label.name !== 'Working'
+												&& label.name !== 'Complete'
+												&& label.name !== 'Awaiting Pull Request') {
 												labels.push(label.name);
 											}
 										}
@@ -197,7 +176,7 @@ createServer((request: IncomingMessage, response: ServerResponse) => {
 										// Add milestone to issue
 										for (let milestone of milestones) {
 											if (milestone.title === columnName) {
-												await issue.UpdateAsync(owner, repo, labels, milestone.id);
+												await issue.UpdateAsync(owner, repo, labels, milestone.number);
 												break;
 											}
 										}

@@ -23,13 +23,7 @@ export class Repository {
 	 */
 	public async GetProjectAsync(name: string): Promise<Project> {
 		let projects: Project[] = await Project.ListAsync(this.owner.login, this.name);
-		for (let project of projects) {
-			if (project.name === name) {
-				return Object.assign(new Project(), project);
-			}
-		}
-
-		return null;
+		return projects.find((project: Project) => project.name === name);
 	}
 }
 
