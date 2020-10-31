@@ -134,7 +134,7 @@ export class Issue {
 			}
 		}
 
-		throw new Error(`Could not find any project label associated with issue ${this.number} on repository "${repo}".`);
+		return null;
 	}
 
 	/**
@@ -242,11 +242,9 @@ export class Issue {
 			owner: owner,
 			repo: repo,
 			issue_number: this.number,
-			milestone: ((milestone === 0)
+			milestone: (milestone === 0)
 				? this.milestone.number
-				: ((milestone === -1)
-					? null
-					: milestone)),
+				: milestone,
 			labels: labels
 		});
 

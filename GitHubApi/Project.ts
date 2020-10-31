@@ -53,9 +53,11 @@ export class Project {
 
 		if (response.status === 200) {
 			let projects: Project[] = [];
-			response.data.forEach(project => {
+
+			for (let project of response.data) {
 				projects.push(Object.assign(new Project(), project));
-			})
+			}
+
 			return projects;
 		}
 
@@ -224,7 +226,7 @@ export class Card {
 	public async GetProjectAsync(): Promise<Project> {
 		let splitUrl: string[] = this.project_url.split('/');
 		let projectId: number = +splitUrl[splitUrl.length - 1];
-		return await Project.GetAsync(projectId);
+		return Project.GetAsync(projectId);
 	}
 
 	/** Check if card content is an issue. */
