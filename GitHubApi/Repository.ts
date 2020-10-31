@@ -5,16 +5,16 @@ import { User } from './User';
 
 export class Repository {
 	/** Return a list of milestones for the current repo. */
-	public async ListMilestonesAsync(): Promise<Milestone[]> {
-		return await Milestone.ListAsync(this.owner.login, this.name);
+	public ListMilestonesAsync(): Promise<Milestone[]> {
+		return Milestone.ListAsync(this.owner.login, this.name);
 	}
 
 	/**
 	 * Get an issue.
 	 * @param issueId The issue id.
 	 */
-	public async GetIssueAsync(issueId: number): Promise<Issue> {
-		return await Issue.GetAsync(this.owner.login, this.name, issueId);
+	public GetIssueAsync(issueId: number): Promise<Issue> {
+		return Issue.GetAsync(this.owner.login, this.name, issueId);
 	}
 
 	/**
@@ -24,6 +24,11 @@ export class Repository {
 	public async GetProjectAsync(name: string): Promise<Project> {
 		let projects: Project[] = await Project.ListAsync(this.owner.login, this.name);
 		return projects.find((project: Project) => project.name === name);
+	}
+
+	/** Return a list of projects from this repo. */
+	public ListProjectsAsync(): Promise<Project[]> {
+		return Project.ListAsync(this.owner.login, this.name);
 	}
 }
 
