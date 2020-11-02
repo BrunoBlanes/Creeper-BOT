@@ -228,11 +228,9 @@ export class Issue {
 			owner: this.repository.owner.login,
 			repo: this.repository.name,
 			issue_number: this.number,
-			milestone: ((milestone === 0)
+			milestone: (milestone === 0)
 				? this.milestone.number
-				: ((milestone === -1)
-					? null
-					: milestone)),
+				: milestone,
 			labels: labels
 		});
 

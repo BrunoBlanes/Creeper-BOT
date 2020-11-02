@@ -96,6 +96,47 @@ createServer((request: IncomingMessage, response: ServerResponse) => {
 						// Card is not a note
 						if (card.content_url != null) {
 
+							// Card created event
+							if (event.action === 'created') {
+
+								// Content is an issue
+								if (card.IsContentAnIssue()) {
+									let issue: Issue = await event.repository.GetIssueAsync(card.GetContentId());
+									let column: Column = await card.GetCurrentColumnAsync();
+									let project: Project = await card.GetProjectAsync();
+									let milestoneNumber = null;
+									let labels: string[] = [];
+
+									// Remove project labels
+									for (let project of await event.repository.ListProjectsAsync()) {
+										for (let label of issue.labels) {
+											if (project.name === label.name) {
+												issue.labels.splice(issue.labels.indexOf(label), 1);
+												break;
+											}
+										}
+									}
+
+									// Copy non project related labels
+									for (let label of issue.labels) {
+										labels.push(label.name);
+									}
+
+									// Add current project label
+									labels.push(project.name);
+
+									// Look for a milestone with the same name as the current column
+									for (let milestone of await event.repository.ListMilestonesAsync()) {
+										if (milestone.title === column.name) {
+											milestoneNumber = milestone.number;
+											break;
+										}
+									}
+
+									await issue.UpdateAsync(labels, milestoneNumber);
+								}
+							}
+
 							// Card moved event
 							if (event.action === 'moved') {
 
