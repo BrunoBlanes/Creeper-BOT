@@ -37,9 +37,9 @@ export class Project {
 	 * https://docs.github.com/en/rest/reference/projects#list-repository-projects
 	 * @param owner
 	 * @param repo
-	 * @param state
+	 * @param state Indicates the state of the projects to return.
 	 */
-	public static async ListAsync(owner: string, repo: string, state: 'open' | 'closed' | 'all' = 'open'): Promise<Project[]> {
+	public static async ListAsync(owner: string, repo: string, state: 'open' | 'closed' | 'all'): Promise<Project[]> {
 		let response = await Octokit.Client.request('GET /repos/:owner/:repo/projects', {
 			owner: owner,
 			repo: repo,

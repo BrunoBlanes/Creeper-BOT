@@ -1,6 +1,7 @@
 import '../Extensions/Strings';
 import '../Extensions/Arrays';
 import { User } from './User';
+import { Repository } from './Repository';
 
 const keywords = [
 	'fixed', 'fixes', 'fix',
@@ -8,7 +9,7 @@ const keywords = [
 	'resolved', 'resolves', 'resolve'];
 const regex: RegExp = /#[1-9][0-9]*/;
 
-export class Push {
+export class Commit {
 
 /** Return a list with all the issues mentioned. */
 	public GetMentions(): Mention[] {
@@ -50,64 +51,32 @@ export class Push {
 }
 
 export class Mention {
+	content_id: number;
+	resolved: boolean;
+
 	constructor(content_id: number, resolved: boolean) {
 		this.content_id = content_id;
 		this.resolved = resolved;
 	}
 }
 
-export interface Commit {
-	url: string;
-	sha: string;
-	node_id: string;
-	html_url: string;
-	comments_url: string;
-	commit: CommitData;
-	author: User;
-	committer: User;
-	parents: Parent[];
-}
-
-export interface Author {
-	name: string;
-	email: string;
-	date: Date;
-}
-
-export interface Committer {
-	name: string;
-	email: string;
-	date: Date;
-}
-
-export interface Tree {
-	url: string;
-	sha: string;
-}
-
-export interface Verification {
-	verified: boolean;
-	reason: string;
-	signature?: any;
-	payload?: any;
-}
-
-export interface CommitData {
-	url: string;
-	author: Author;
-	committer: Committer;
-	message: string;
-	tree: Tree;
-	comment_count: number;
-	verification: Verification;
-}
-
-export interface Parent {
-	url: string;
-	sha: string;
-}
-
 export interface Push {
+	ref: string;
+	before: string;
+	after: string;
+	created: boolean;
+	deleted: boolean;
+	forced: boolean;
+	base_ref?: any;
+	compare: string;
+	commits: Commit[];
+	head_commit?: Commit;
+	repository: Repository;
+	pusher: Author;
+	sender: User;
+}
+
+export interface Commit {
 	id: string;
 	tree_id: string;
 	distinct: boolean;
@@ -115,13 +84,14 @@ export interface Push {
 	timestamp: Date;
 	url: string;
 	author: Author;
-	committer: Committer;
-	added: any[];
+	committer: Author;
+	added: string[];
 	removed: string[];
 	modified: string[];
 }
 
-export interface Mention {
-	content_id: number;
-	resolved: boolean;
+export interface Author {
+	name: string;
+	email: string;
+	date?: Date;
 }

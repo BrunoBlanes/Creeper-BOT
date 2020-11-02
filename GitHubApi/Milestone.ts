@@ -37,14 +37,14 @@ export interface Milestone {
 	id: number;
 	node_id: string;
 	number: number;
-	state: string;
 	title: string;
 	description: string;
 	creator: User;
 	open_issues: number;
 	closed_issues: number;
+	state: string;
 	created_at: Date;
 	updated_at: Date;
-	closed_at: Date;
 	due_on: Date;
+	closed_at: Date;
 }

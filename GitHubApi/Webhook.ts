@@ -1,7 +1,8 @@
 import { Repository } from './Repository';
-import { Issue, Label } from './Issue';
 import { Card } from './Project';
-import { Push } from './Commit';
+import { Issue } from './Issue';
+import { Label } from './Label';
+import { Commit } from './Push';
 import { User } from './User';
 
 export class EventPayload {
@@ -19,7 +20,7 @@ export class EventPayload {
 		if (jsonPayload.commits != null) {
 			this.commits = [];
 			jsonPayload.commits.forEach(push => {
-				this.commits.push(Object.assign(new Push(), push));
+				this.commits.push(Object.assign(new Commit(), push));
 			});
 		}
 
@@ -43,7 +44,7 @@ export interface EventPayload {
 	issue?: Issue;
 	label?: Label;
 	project_card?: Card;
-	commits?: Push[];
+	commits?: Commit[];
 	pusher?: User;
 	ref?: string;
 	before?: string;

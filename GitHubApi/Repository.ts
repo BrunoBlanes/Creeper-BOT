@@ -1,3 +1,4 @@
+import { PullRequest } from './PullRequest';
 import { Milestone } from './Milestone';
 import { Project } from './Project';
 import { Issue } from './Issue';
@@ -21,14 +22,27 @@ export class Repository {
 	 * Return a project by name.
 	 * @param name The name of the project.
 	 */
-	public async GetProjectAsync(name: string): Promise<Project> {
-		let projects: Project[] = await Project.ListAsync(this.owner.login, this.name);
+	public async GetProjectAsync(name: string, state: 'open' | 'closed' | 'all' = 'open'): Promise<Project> {
+		let projects: Project[] = await Project.ListAsync(this.owner.login, this.name, state);
 		return projects.find((project: Project) => project.name === name);
 	}
 
-	/** Return a list of projects from this repo. */
-	public ListProjectsAsync(): Promise<Project[]> {
-		return Project.ListAsync(this.owner.login, this.name);
+	/**
+	 * Create a pull request.
+	 * @param head The name of the branch where your changes are implemented.
+	 * @param base The name of the branch you want the changes pulled into.
+	 * @param title The title of the new pull request.
+	 */
+	public CreatePullRequestAsync(head: string, base: string, title: string): Promise<void> {
+		return PullRequest.CreateAsync(this.owner.login, this.name, head, base, title);
+	}
+
+	/**
+	 * Lists the projects in this repository.
+	 * @param state Indicates the state of the projects to return.
+	 */
+	public ListProjectsAsync(state: 'open' | 'closed' | 'all' = 'open'): Promise<Project[]> {
+		return Project.ListAsync(this.owner.login, this.name, state);
 	}
 }
 
