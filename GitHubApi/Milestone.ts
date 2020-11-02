@@ -16,7 +16,16 @@ export class Milestone {
 			state: state
 		});
 
-		if (response.status === 200) return response.data as unknown as Milestone[];
+		if (response.status === 200) {
+			let milestones: Milestone[] = [];
+
+			for (let milestone of response.data) {
+				milestones.push(Object.assign(new Milestone(), milestone));
+			}
+
+			return milestones;
+		}
+		
 		throw new Error(`Could not retrieve a list of milestones for repository "${repo}" of owner "${owner}"./n Octokit returned error ${response.status}.`);
 	}
 }
@@ -28,14 +37,14 @@ export interface Milestone {
 	id: number;
 	node_id: string;
 	number: number;
-	state: string;
 	title: string;
 	description: string;
 	creator: User;
 	open_issues: number;
 	closed_issues: number;
+	state: string;
 	created_at: Date;
 	updated_at: Date;
-	closed_at: Date;
 	due_on: Date;
+	closed_at: Date;
 }

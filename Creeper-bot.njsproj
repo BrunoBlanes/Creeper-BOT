@@ -13,7 +13,7 @@
     <ProjectGuid>2d418db4-af5d-4253-9726-920f49f97bc9</ProjectGuid>
     <ProjectHome>
     </ProjectHome>
-    <StartupFile>server.ts</StartupFile>
+    <StartupFile>Server.ts</StartupFile>
     <SearchPath>
     </SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
@@ -31,10 +31,7 @@
     <DebugSymbols>true</DebugSymbols>
   </PropertyGroup>
   <ItemGroup>
-    <None Include="Creeper-Bot - Web Deploy.pubxml" />
-    <Content Include="GitHubApi\Commit.ts" />
-    <Content Include="GitHubApi\PullRequest.ts" />
-    <None Include="Properties\PublishProfiles\Creeper-Bot - Web Deploy.pubxml" />
+    <Content Include="GitHubApi\Push.ts" />
     <Content Include="Services\Octokit.ts" />
     <Content Include="GitHubApi\Project.ts" />
     <Content Include="GitHubApi\Issue.ts" />
@@ -48,8 +45,6 @@
   <ItemGroup>
     <Folder Include="GitHubApi\" />
     <Folder Include="Extensions\" />
-    <Folder Include="Properties\" />
-    <Folder Include="Properties\PublishProfiles\" />
     <Folder Include="Services\" />
   </ItemGroup>
   <ItemGroup>
@@ -59,13 +54,11 @@
     <TypeScriptCompile Include="GitHubApi\Milestone.ts">
       <SubType>Code</SubType>
     </TypeScriptCompile>
-    <TypeScriptCompile Include="GitHubApi\Reference.ts">
-      <SubType>Code</SubType>
-    </TypeScriptCompile>
-    <TypeScriptCompile Include="GitHubApi\Release.ts">
-      <SubType>Code</SubType>
-    </TypeScriptCompile>
+    <TypeScriptCompile Include="GitHubApi\PullRequest.ts" />
     <TypeScriptCompile Include="GitHubApi\Repository.ts">
+      <SubType>Code</SubType>
+    </TypeScriptCompile>
+    <TypeScriptCompile Include="GitHubApi\Label.ts">
       <SubType>Code</SubType>
     </TypeScriptCompile>
     <TypeScriptCompile Include="GitHubApi\User.ts">
@@ -77,7 +70,7 @@
     <TypeScriptCompile Include="Extensions\Strings.ts">
       <SubType>Code</SubType>
     </TypeScriptCompile>
-    <TypeScriptCompile Include="server.ts">
+    <TypeScriptCompile Include="Server.ts">
       <SubType>Code</SubType>
     </TypeScriptCompile>
     <TypeScriptCompile Include="Services\Azure.ts">
