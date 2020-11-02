@@ -1,5 +1,7 @@
 import { Octokit } from '../Services/Octokit';
 import { User } from './User';
+import { Repository } from './Repository';
+import { Installation } from './Webhook';
 
 export class Project {
 	/**
@@ -241,6 +243,13 @@ export class Card {
 	}
 }
 
+export class CardEvent {
+	constructor() {
+		this.project_card = Object.assign(new Card(), this.project_card);
+		this.repository = Object.assign(new Repository(), this.repository);
+	}
+}
+
 export interface Project {
 	owner_url: string;
 	url: string;
@@ -280,5 +289,13 @@ export interface Card {
 	creator: User;
 	created_at: Date;
 	updated_at: Date;
-	content_url: string;
+	content_url?: string;
+}
+
+export interface CardEvent {
+	action: string;
+	project_card: Card;
+	repository: Repository;
+	sender: User;
+	installation: Installation;
 }

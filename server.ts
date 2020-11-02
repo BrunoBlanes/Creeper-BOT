@@ -1,5 +1,5 @@
 import { createServer, IncomingMessage, ServerResponse } from 'http';
-import { Card, Project, Column } from './GitHubApi/Project';
+import { Card, Project, Column, CardEvent } from './GitHubApi/Project';
 import { PullRequest } from './GitHubApi/PullRequest';
 import { Repository } from './GitHubApi/Repository';
 import { EventPayload } from './GitHubApi/Webhook';
@@ -9,6 +9,7 @@ import { Octokit } from './Services/Octokit';
 import { Issue, IssueEvent } from './GitHubApi/Issue';
 import { Label } from './GitHubApi/Label';
 import { User } from './GitHubApi/User';
+import { PushEvent } from './GitHubApi/Push';
 
 createServer((request: IncomingMessage, response: ServerResponse) => {
 
@@ -81,21 +82,19 @@ createServer((request: IncomingMessage, response: ServerResponse) => {
 					}
 				}
 
-				// Parse request body as json and set aliases
-				let event: EventPayload = new EventPayload(JSON.parse(body));
-				let repo: Repository = event.repository;
-				let owner: User = repo.owner;
+				// Handle project cards events
+				// https://docs.github.com/en/developers/webhooks-and-events/webhook-events-and-payloads#project_card
+				if (request.headers['x-github-event'].toString() === 'project_card') {
 
-				// Create Octokit client with the current installation id
-				await Octokit.SetClientAsync(event.installation.id);
+					// Parse request body as json and set aliases
+					let event: CardEvent = Object.assign(new CardEvent(), JSON.parse(body));
+					let card: Card = event.project_card;
 
-				// Event is related to the 'Average CRM' repo
-				if (repo.name === 'Average-CRM') {
+					// Create Octokit client with the current installation id
+					await Octokit.SetClientAsync(event.installation.id);
 
-					// Handle project cards events
-					// https://docs.github.com/en/developers/webhooks-and-events/webhook-events-and-payloads#project_card
-					if (request.headers['x-github-event'].toString() === 'project_card') {
-						let card: Card = event.project_card;
+					// Event is related to the 'Average CRM' repo
+					if (event.repository.name === 'Average-CRM') {
 
 						// Card is not a note
 						if (card.content_url != null) {
@@ -105,7 +104,7 @@ createServer((request: IncomingMessage, response: ServerResponse) => {
 
 								// Content is an issue
 								if (card.IsContentAnIssue()) {
-									let issue: Issue = await repo.GetIssueAsync(card.GetContentId());
+									let issue: Issue = await event.repository.GetIssueAsync(card.GetContentId());
 									let columnName: string = (await card.GetCurrentColumnAsync()).name;
 									let labels: string[] = [];
 
@@ -165,7 +164,7 @@ createServer((request: IncomingMessage, response: ServerResponse) => {
 
 									// Moved to a milestone column
 									else {
-										let milestones: Milestone[] = await repo.ListMilestonesAsync();
+										let milestones: Milestone[] = await event.repository.ListMilestonesAsync();
 
 										for (let label of issue.labels) {
 											if (label.name !== 'Triage'
@@ -189,16 +188,26 @@ createServer((request: IncomingMessage, response: ServerResponse) => {
 							}
 						}
 					}
+				}
 
-					// Handle push events
-					// https://docs.github.com/en/developers/webhooks-and-events/webhook-events-and-payloads#push
-					else if (request.headers['x-github-event'].toString() === 'push') {
+				// Handle push events
+				// https://docs.github.com/en/developers/webhooks-and-events/webhook-events-and-payloads#push
+				if (request.headers['x-github-event'].toString() === 'push') {
+
+					// Parse request body as json and set aliases
+					let event: PushEvent = Object.assign(new PushEvent(), JSON.parse(body));
+
+					// Create Octokit client with the current installation id
+					await Octokit.SetClientAsync(event.installation.id);
+
+					// Event is related to the 'Average CRM' repo
+					if (event.repository.name === 'Average-CRM') {
 
 						for (let commit of event.commits) {
 
 							// Move resolved issues' project card to 'Done' column
 							for (let mention of commit.GetMentions()) {
-								let issue: Issue = await repo.GetIssueAsync(mention.content_id);
+								let issue: Issue = await event.repository.GetIssueAsync(mention.content_id);
 								let project: Project = await issue.GetProjectAsync();
 								let card: Card = await issue.GetProjectCardAsync();
 								let column: Column;
@@ -218,8 +227,6 @@ createServer((request: IncomingMessage, response: ServerResponse) => {
 						}
 					}
 				}
-
-				response.end();
 			}
 
 			else {
