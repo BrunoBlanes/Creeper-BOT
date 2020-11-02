@@ -2,8 +2,8 @@ import '../Extensions/Strings';
 import '../Extensions/Arrays';
 
 import { Repository } from './Repository';
-import { User } from './User';
 import { Installation } from './Webhook';
+import { User } from './User';
 
 const keywords = [
 	'fixed', 'fixes', 'fix',
@@ -63,6 +63,18 @@ export class Mention {
 }
 
 export class PushEvent {
+	constructor(jsonPayload: PushEvent) {
+		this.head_commit = Object.assign(new Commit(), jsonPayload.head_commit);
+		this.repository = Object.assign(new Repository(), jsonPayload.repository);
+		this.commits = [];
+
+		for (let commit of jsonPayload.commits) {
+			this.commits.push(Object.assign(new Commit(), commit));
+		}
+	}
+}
+
+export interface PushEvent {
 	ref: string;
 	before: string;
 	after: string;

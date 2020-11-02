@@ -1,7 +1,7 @@
 import { Octokit } from '../Services/Octokit';
-import { User } from './User';
 import { Repository } from './Repository';
 import { Installation } from './Webhook';
+import { User } from './User';
 
 export class Project {
 	/**
@@ -246,9 +246,9 @@ export class Card {
 }
 
 export class CardEvent {
-	constructor() {
-		this.project_card = Object.assign(new Card(), this.project_card);
-		this.repository = Object.assign(new Repository(), this.repository);
+	constructor(jsonPayload: CardEvent) {
+		this.project_card = Object.assign(new Card(), jsonPayload.project_card);
+		this.repository = Object.assign(new Repository(), jsonPayload.repository);
 	}
 }
 

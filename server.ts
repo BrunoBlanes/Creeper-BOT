@@ -1,15 +1,12 @@
-import { createServer, IncomingMessage, ServerResponse } from 'http';
 import { Card, Project, Column, CardEvent } from './GitHubApi/Project';
-import { PullRequest } from './GitHubApi/PullRequest';
-import { Repository } from './GitHubApi/Repository';
-import { EventPayload } from './GitHubApi/Webhook';
+import { createServer, IncomingMessage, ServerResponse } from 'http';
+import { PushEvent, Mention, Commit } from './GitHubApi/Push';
+import { Issue, IssueEvent } from './GitHubApi/Issue';
 import { Milestone } from './GitHubApi/Milestone';
 import { Validator } from './Services/Azure';
 import { Octokit } from './Services/Octokit';
-import { Issue, IssueEvent } from './GitHubApi/Issue';
 import { Label } from './GitHubApi/Label';
-import { User } from './GitHubApi/User';
-import { PushEvent } from './GitHubApi/Push';
+import '../Extensions/Arrays';
 
 createServer((request: IncomingMessage, response: ServerResponse) => {
 
@@ -27,7 +24,7 @@ createServer((request: IncomingMessage, response: ServerResponse) => {
 				if (request.headers['x-github-event'].toString() === 'issues') {
 
 					// Parse request body as json and set aliases
-					let event: IssueEvent = Object.assign(new IssueEvent(), JSON.parse(body));
+					let event: IssueEvent = new IssueEvent(JSON.parse(body));
 					let issue: Issue = event.issue;
 
 					// Create Octokit client with the current installation id
@@ -87,7 +84,7 @@ createServer((request: IncomingMessage, response: ServerResponse) => {
 				if (request.headers['x-github-event'].toString() === 'project_card') {
 
 					// Parse request body as json and set aliases
-					let event: CardEvent = Object.assign(new CardEvent(), JSON.parse(body));
+					let event: CardEvent = new CardEvent(JSON.parse(body));
 					let card: Card = event.project_card;
 
 					// Create Octokit client with the current installation id
@@ -226,44 +223,6 @@ createServer((request: IncomingMessage, response: ServerResponse) => {
 										}
 									}
 								}
-							}
-						}
-					}
-				}
-
-				// Handle push events
-				// https://docs.github.com/en/developers/webhooks-and-events/webhook-events-and-payloads#push
-				if (request.headers['x-github-event'].toString() === 'push') {
-
-					// Parse request body as json and set aliases
-					let event: PushEvent = Object.assign(new PushEvent(), JSON.parse(body));
-
-					// Create Octokit client with the current installation id
-					await Octokit.SetClientAsync(event.installation.id);
-
-					// Event is related to the 'Average CRM' repo
-					if (event.repository.name === 'Average-CRM') {
-
-						for (let commit of event.commits) {
-
-							// Move resolved issues' project card to 'Done' column
-							for (let mention of commit.GetMentions()) {
-								let issue: Issue = await event.repository.GetIssueAsync(mention.content_id);
-								let project: Project = await issue.GetProjectAsync();
-								let card: Card = await issue.GetProjectCardAsync();
-								let column: Column;
-
-								// Issue is resolved
-								if (mention.resolved) {
-									column = await project.GetColumnAsync('Done');
-								}
-
-								else {
-									column = await project.GetColumnAsync('In progress');
-								}
-
-								// Move project card
-								await card.MoveAsync(column);
 							}
 						}
 					}
