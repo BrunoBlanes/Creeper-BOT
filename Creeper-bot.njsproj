@@ -31,63 +31,30 @@
     <DebugSymbols>true</DebugSymbols>
   </PropertyGroup>
   <ItemGroup>
-    <Content Include="GitHubApi\Push.ts" />
-    <None Include="Properties\PublishProfiles\Creeper-Bot - Web Deploy.pubxml" />
-    <Content Include="Properties\serviceDependencies.Creeper-Bot - Web Deploy.json" />
-    <Content Include="Properties\serviceDependencies.json" />
-    <Content Include="Properties\serviceDependencies.local.json" />
-    <Content Include="Properties\ServiceDependencies\Creeper-Bot - Web Deploy\profile.arm.json" />
-    <Content Include="Properties\ServiceDependencies\Creeper-Bot - Web Deploy\secrets1.arm.json" />
-    <Content Include="Properties\ServiceDependencies\local\secrets1.arm.json" />
-    <Content Include="Services\Octokit.ts" />
-    <Content Include="GitHubApi\Project.ts" />
-    <Content Include="GitHubApi\Issue.ts" />
-    <Content Include="tsconfig.json">
-      <SubType>Code</SubType>
-    </Content>
-    <Content Include="Web.config" />
-    <Content Include="package.json" />
-    <Content Include="README.md" />
-  </ItemGroup>
-  <ItemGroup>
-    <Folder Include="GitHubApi\" />
     <Folder Include="Extensions\" />
-    <Folder Include="Properties\" />
-    <Folder Include="Properties\PublishProfiles\" />
-    <Folder Include="Properties\ServiceDependencies\" />
-    <Folder Include="Properties\ServiceDependencies\Creeper-Bot - Web Deploy\" />
-    <Folder Include="Properties\ServiceDependencies\local\" />
+    <Folder Include="GitHubApi\" />
     <Folder Include="Services\" />
   </ItemGroup>
   <ItemGroup>
-    <TypeScriptCompile Include="Extensions\Arrays.ts">
-      <SubType>Code</SubType>
-    </TypeScriptCompile>
-    <TypeScriptCompile Include="GitHubApi\Milestone.ts">
-      <SubType>Code</SubType>
-    </TypeScriptCompile>
+    <TypeScriptCompile Include="Extensions\Arrays.ts" />
+    <TypeScriptCompile Include="Extensions\Strings.ts" />
+    <TypeScriptCompile Include="GitHubApi\Issue.ts" />
+    <TypeScriptCompile Include="GitHubApi\Label.ts" />
+    <TypeScriptCompile Include="GitHubApi\Milestone.ts" />
+    <TypeScriptCompile Include="GitHubApi\Project.ts" />
     <TypeScriptCompile Include="GitHubApi\PullRequest.ts" />
-    <TypeScriptCompile Include="GitHubApi\Repository.ts">
-      <SubType>Code</SubType>
-    </TypeScriptCompile>
-    <TypeScriptCompile Include="GitHubApi\Label.ts">
-      <SubType>Code</SubType>
-    </TypeScriptCompile>
-    <TypeScriptCompile Include="GitHubApi\User.ts">
-      <SubType>Code</SubType>
-    </TypeScriptCompile>
-    <TypeScriptCompile Include="GitHubApi\Webhook.ts">
-      <SubType>Code</SubType>
-    </TypeScriptCompile>
-    <TypeScriptCompile Include="Extensions\Strings.ts">
-      <SubType>Code</SubType>
-    </TypeScriptCompile>
-    <TypeScriptCompile Include="Server.ts">
-      <SubType>Code</SubType>
-    </TypeScriptCompile>
-    <TypeScriptCompile Include="Services\Azure.ts">
-      <SubType>Code</SubType>
-    </TypeScriptCompile>
+    <TypeScriptCompile Include="GitHubApi\Push.ts" />
+    <TypeScriptCompile Include="GitHubApi\Repository.ts" />
+    <TypeScriptCompile Include="GitHubApi\User.ts" />
+    <TypeScriptCompile Include="GitHubApi\Webhook.ts" />
+    <TypeScriptCompile Include="Server.ts" />
+    <TypeScriptCompile Include="Services\Azure.ts" />
+    <TypeScriptCompile Include="Services\Octokit.ts" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="tsconfig.json" />
+    <Content Include="Web.config" />
+    <None Include="Web.Debug.config" />
   </ItemGroup>
   <Import Project="$(VSToolsPath)\Node.js Tools\Microsoft.NodejsToolsV2.targets" />
   <ProjectExtensions>
