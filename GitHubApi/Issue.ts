@@ -7,10 +7,6 @@ import { Label } from './Label';
 import { User } from './User';
 
 export class Issue {
-	constructor(repository?: Repository) {
-		this.repository = repository;
-	}
-
 	/**
 	 * Get an issue.
 	 * https://docs.github.com/en/rest/reference/issues#get-an-issue
@@ -249,8 +245,11 @@ export class Issue {
 }
 
 export class IssueEvent {
-	constructor() {
-		this.issue = Object.assign(new Issue(this.repository), this.issue);
+	constructor(jsonPayload: IssueEvent) {
+		this.issue = Object.assign(new Issue(), jsonPayload.issue);
+		this.milestone = Object.assign(new Milestone(), jsonPayload.milestone);
+		this.repository = Object.assign(new Repository(), jsonPayload.repository);
+		this.issue.repository = this.repository;
 	}
 }
 

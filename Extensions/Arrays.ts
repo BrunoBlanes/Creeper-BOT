@@ -8,6 +8,9 @@ declare global {
 
 		/** Returns the last item of the array. */
 		last(): T;
+
+		/** Returns the first item of the array. */
+		first(): T;
 	}
 }
 
@@ -31,6 +34,10 @@ Array.prototype.skipDuplicatePush = function (item): number {
 
 Array.prototype.last = function (): any {
 	return this[this.length - 1];
+};
+
+Array.prototype.first = function (): any {
+	return this[0];
 };
 
 export { };

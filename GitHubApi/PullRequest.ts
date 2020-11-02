@@ -13,14 +13,16 @@ export class PullRequest {
 	 * @param head The name of the branch where your changes are implemented.
 	 * @param base The name of the branch you want the changes pulled into.
 	 * @param title The title of the new pull request.
+	 * @param body The contents of the pull request.
 	 */
-	public static async CreateAsync(owner: string, repo: string, head: string, base: string, title: string): Promise<void> {
+	public static async CreateAsync(owner: string, repo: string, head: string, base: string, title: string, body: string): Promise<void> {
 		let response = await Octokit.Client.request('POST /repos/:owner/:repo/pulls', {
 			owner: owner,
 			repo: repo,
 			head: head,
 			base: base,
-			title: title
+			title: title,
+			body: body
 		});
 
 		if (response.status === 403) {
@@ -64,7 +66,6 @@ export interface PullRequest {
 	requested_teams: Team[];
 	head: Head;
 	base: Base;
-	_links: Links;
 	author_association: string;
 	draft: boolean;
 	merged: boolean;
@@ -109,47 +110,4 @@ export interface Team {
 	permission: string;
 	members_url: string;
 	repositories_url: string;
-}
-
-export interface Links {
-	self: Self;
-	html: Html;
-	issue: Issue;
-	comments: Comments;
-	review_comments: ReviewComments;
-	review_comment: ReviewComment;
-	commits: Commits;
-	statuses: Statuses;
-}
-
-export interface Self {
-	href: string;
-}
-
-export interface Html {
-	href: string;
-}
-
-export interface Issue {
-	href: string;
-}
-
-export interface Comments {
-	href: string;
-}
-
-export interface ReviewComments {
-	href: string;
-}
-
-export interface ReviewComment {
-	href: string;
-}
-
-export interface Commits {
-	href: string;
-}
-
-export interface Statuses {
-	href: string;
 }
