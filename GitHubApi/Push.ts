@@ -1,7 +1,9 @@
 import '../Extensions/Strings';
 import '../Extensions/Arrays';
-import { User } from './User';
+
 import { Repository } from './Repository';
+import { User } from './User';
+import { Installation } from './Webhook';
 
 const keywords = [
 	'fixed', 'fixes', 'fix',
@@ -60,7 +62,7 @@ export class Mention {
 	}
 }
 
-export interface Push {
+export class PushEvent {
 	ref: string;
 	before: string;
 	after: string;
@@ -74,6 +76,7 @@ export interface Push {
 	repository: Repository;
 	pusher: Author;
 	sender: User;
+	installation: Installation;
 }
 
 export interface Commit {
