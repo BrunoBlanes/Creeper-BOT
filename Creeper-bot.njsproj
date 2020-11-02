@@ -32,6 +32,13 @@
   </PropertyGroup>
   <ItemGroup>
     <Content Include="GitHubApi\Push.ts" />
+    <None Include="Properties\PublishProfiles\Creeper-Bot - Web Deploy.pubxml" />
+    <Content Include="Properties\serviceDependencies.Creeper-Bot - Web Deploy.json" />
+    <Content Include="Properties\serviceDependencies.json" />
+    <Content Include="Properties\serviceDependencies.local.json" />
+    <Content Include="Properties\ServiceDependencies\Creeper-Bot - Web Deploy\profile.arm.json" />
+    <Content Include="Properties\ServiceDependencies\Creeper-Bot - Web Deploy\secrets1.arm.json" />
+    <Content Include="Properties\ServiceDependencies\local\secrets1.arm.json" />
     <Content Include="Services\Octokit.ts" />
     <Content Include="GitHubApi\Project.ts" />
     <Content Include="GitHubApi\Issue.ts" />
@@ -45,6 +52,11 @@
   <ItemGroup>
     <Folder Include="GitHubApi\" />
     <Folder Include="Extensions\" />
+    <Folder Include="Properties\" />
+    <Folder Include="Properties\PublishProfiles\" />
+    <Folder Include="Properties\ServiceDependencies\" />
+    <Folder Include="Properties\ServiceDependencies\Creeper-Bot - Web Deploy\" />
+    <Folder Include="Properties\ServiceDependencies\local\" />
     <Folder Include="Services\" />
   </ItemGroup>
   <ItemGroup>
