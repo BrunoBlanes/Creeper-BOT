@@ -14,41 +14,35 @@ const regex: RegExp = /#[1-9][0-9]*/;
 export class Commit {
 
 /** Return a list with all the issues mentioned. */
-	public GetMentions(): Mention[] {
+	public GetMention(): Mention | null {
 		let message: string = this.message.toLowerCase();
 		let match: RegExpMatchArray = message.match(regex);
-		let mentions: Mention[] = [];
 
 		// Issue mention found
 		while (match !== null) {
-			let resolved: boolean = false;
 
 			for (let keyword of keywords) {
 
-				// Look for a closing keyword in the commit message up until the issue mention
+				// Look for the first closing keyword in the commit message
 				let keywordIndex: number = message.lookup(keyword, undefined, match.index);
 
+				// Keyword found
 				if (keywordIndex !== -1) {
 
 					// Keyword was used just before issue was mentioned
 					if ((keywordIndex + keyword.length) === (match.index - 1)) {
-						resolved = true;
-						break;
+
+						// Return a closed issue mention
+						return new Mention(+match[0].remove(0, 1), true);
 					}
 				}
+
+				// Return an open issue mention
+				return new Mention(+match[0].remove(0, 1), false);
 			}
-
-			// Add keyword index to array
-			mentions.skipDuplicatePush(new Mention(+match[0].remove(0, 1), resolved));
-
-			// Trim the message to remove the current match
-			message = message.substring(match.index + match[0].length);
-
-			// Look for the next match
-			match = message.match(regex);
 		}
 
-		return mentions;
+		return null;
 	}
 }
 

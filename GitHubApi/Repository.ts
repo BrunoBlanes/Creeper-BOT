@@ -1,8 +1,11 @@
 import { PullRequest } from './PullRequest';
+import { Reference } from './Reference';
 import { Milestone } from './Milestone';
+import { Release } from './Release';
 import { Project } from './Project';
 import { Issue } from './Issue';
 import { User } from './User';
+import '../Extensions/Arrays';
 
 export class Repository {
 	/** Return a list of milestones for the current repo. */
@@ -36,8 +39,17 @@ export class Repository {
 	 * @param title The title of the new pull request.
 	 * @param body The contents of the pull request.
 	 */
-	public CreatePullRequestAsync(head: string, base: string, title: string, body: string): Promise<void> {
+	public CreatePullRequestAsync(head: string, base: string, title: string, body: string): Promise<PullRequest> {
 		return PullRequest.CreateAsync(this.owner.login, this.name, head, base, title, body);
+	}
+
+	/**
+	 * List pull resquests.
+	 * @param head Filter pulls by head user or head organization and branch name in the format of user:ref-name or organization:ref-name.
+	 * @param base Filter pulls by base branch name. Example: gh-pages.
+	 */
+	public ListPullRequestsAsync(head: string, base: string): Promise<PullRequest[]> {
+		return PullRequest.ListAsync(this.owner.login, this.name, head, base);
 	}
 
 	/**
@@ -46,6 +58,25 @@ export class Repository {
 	 */
 	public ListProjectsAsync(state: 'open' | 'closed' | 'all' = 'open'): Promise<Project[]> {
 		return Project.ListAsync(this.owner.login, this.name, state);
+	}
+
+	/** Gets the latest release in this repository. */
+	public async GetLatestReleaseAsync(): Promise<Release> {
+		return (await Release.ListAsync(this.owner.login, this.name)).first();
+	}
+
+	/** Gets the latest references in this repository. */
+	public async GetLatestReferenceAsync(ref?: string): Promise<Reference> {
+		return (await Reference.ListAsync(this.owner.login, this.name, ref)).last();
+	}
+
+	/**
+	 * Create a new reference.
+	 * @param ref The name of the fully qualified reference (ie: refs/heads/master). If it doesn't start with 'refs' and have at least two slashes, it will be rejected.
+	 * @param sha The SHA1 value for this reference.
+	 */
+	public CreateReferenceAsync(ref: string, sha: string): Promise<Reference> {
+		return Reference.CreateAsync(this.owner.login, this.name, ref, sha);
 	}
 }
 
