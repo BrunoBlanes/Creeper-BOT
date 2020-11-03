@@ -10,7 +10,7 @@ export class Octokit {
 		this.Client = new HttpClient({
 			authStrategy: createAppAuth,
 			auth: {
-				id: 72569,
+				appId: 72569,
 				installationId: installationId,
 				privateKey: await Azure.GetPrivateKeyAsync()
 			},
