@@ -14,8 +14,10 @@ export class Repository {
 	 * Get an issue.
 	 * @param issueId The issue id.
 	 */
-	public GetIssueAsync(issueId: number): Promise<Issue> {
-		return Issue.GetAsync(this.owner.login, this.name, issueId);
+	public async GetIssueAsync(issueId: number): Promise<Issue> {
+		let issue: Issue = await Issue.GetAsync(this.owner.login, this.name, issueId);
+		issue.repository = this;
+		return issue;
 	}
 
 	/**

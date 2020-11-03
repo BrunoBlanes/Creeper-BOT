@@ -248,6 +248,11 @@ export class IssueEvent {
 		this.milestone = Object.assign(new Milestone(), jsonPayload.milestone);
 		this.repository = Object.assign(new Repository(), jsonPayload.repository);
 		this.issue.repository = this.repository;
+
+		this.action = jsonPayload.action;
+		this.label = jsonPayload.label;
+		this.sender = jsonPayload.sender;
+		this.installation = jsonPayload.installation;
 	}
 }
 
