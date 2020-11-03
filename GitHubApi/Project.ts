@@ -249,6 +249,10 @@ export class CardEvent {
 	constructor(jsonPayload: CardEvent) {
 		this.project_card = Object.assign(new Card(), jsonPayload.project_card);
 		this.repository = Object.assign(new Repository(), jsonPayload.repository);
+
+		this.action = jsonPayload.action;
+		this.sender = jsonPayload.sender;
+		this.installation = jsonPayload.installation;
 	}
 }
 

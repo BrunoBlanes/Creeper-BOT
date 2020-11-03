@@ -63,7 +63,7 @@ export class Mention {
 }
 
 export class PushEvent {
-	constructor(jsonPayload: PushEvent) {
+	constructor(jsonPayload?: PushEvent) {
 		this.head_commit = Object.assign(new Commit(), jsonPayload.head_commit);
 		this.repository = Object.assign(new Repository(), jsonPayload.repository);
 		this.commits = [];
@@ -71,6 +71,18 @@ export class PushEvent {
 		for (let commit of jsonPayload.commits) {
 			this.commits.push(Object.assign(new Commit(), commit));
 		}
+
+		this.ref = jsonPayload.ref;
+		this.before = jsonPayload.before;
+		this.after = jsonPayload.after;
+		this.created = jsonPayload.created;
+		this.deleted = jsonPayload.deleted;
+		this.forced = jsonPayload.forced;
+		this.base_ref = jsonPayload.base_ref;
+		this.compare = jsonPayload.compare;
+		this.pusher = jsonPayload.pusher;
+		this.sender = jsonPayload.sender;
+		this.installation = jsonPayload.installation;
 	}
 }
 
