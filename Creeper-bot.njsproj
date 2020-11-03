@@ -44,6 +44,12 @@
     <TypeScriptCompile Include="GitHubApi\Project.ts" />
     <TypeScriptCompile Include="GitHubApi\PullRequest.ts" />
     <TypeScriptCompile Include="GitHubApi\Push.ts" />
+    <TypeScriptCompile Include="GitHubApi\Reference.ts">
+      <SubType>Code</SubType>
+    </TypeScriptCompile>
+    <TypeScriptCompile Include="GitHubApi\Release.ts">
+      <SubType>Code</SubType>
+    </TypeScriptCompile>
     <TypeScriptCompile Include="GitHubApi\Repository.ts" />
     <TypeScriptCompile Include="GitHubApi\User.ts" />
     <TypeScriptCompile Include="GitHubApi\Webhook.ts" />

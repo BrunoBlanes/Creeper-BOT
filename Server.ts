@@ -2,11 +2,15 @@ import { Card, Project, Column, CardEvent } from './GitHubApi/Project';
 import { createServer, IncomingMessage, ServerResponse } from 'http';
 import { Issue, IssueEvent } from './GitHubApi/Issue';
 import { PushEvent, Mention } from './GitHubApi/Push';
+import { Repository } from './GitHubApi/Repository';
 import { Milestone } from './GitHubApi/Milestone';
+import { Version, Release } from './GitHubApi/Release';
 import { Validator } from './Services/Azure';
 import { Octokit } from './Services/Octokit';
 import { Label } from './GitHubApi/Label';
 import './Extensions/Arrays';
+import { Reference } from './GitHubApi/Reference';
+import { PullRequest } from './GitHubApi/PullRequest';
 
 createServer((request: IncomingMessage, response: ServerResponse) => {
 
@@ -237,6 +241,7 @@ createServer((request: IncomingMessage, response: ServerResponse) => {
 
 					// Parse request body as json and set aliases
 					let event: PushEvent = new PushEvent(jsonPayload);
+					let repo: Repository = event.repository;
 
 					// Create Octokit client with the current installation id
 					await Octokit.SetClientAsync(event.installation.id);
@@ -244,27 +249,82 @@ createServer((request: IncomingMessage, response: ServerResponse) => {
 					// Event is related to the 'Average CRM' repo
 					if (event.repository.name === 'Average-CRM') {
 						for (let commit of event.commits) {
-							let mentions: Mention[] = commit.GetMentions();
+							let mention: Mention | null = commit.GetMention();
 
-							// Move resolved issues' project card to 'Done' column
-							for (let mention of mentions) {
-								let issue: Issue = await event.repository.GetIssueAsync(mention.content_id);
+							if (mention != null) {
+								let issue: Issue = await repo.GetIssueAsync(mention.content_id);
 								let project: Project = await issue.GetProjectAsync();
 								let card: Card = await issue.GetProjectCardAsync();
-								let column: Column;
-
-								// Issue is resolved
-								if (mention.resolved) {
-									column = await project.GetColumnAsync('Done');
-								}
-
-								// Issue is not resolved
-								else {
-									column = await project.GetColumnAsync('In progress');
-								}
+								let column: Column = mention.resolved
+									? await project.GetColumnAsync('Done')
+									: await project.GetColumnAsync('In progress');
 
 								// Move project card
 								await card.MoveAsync(column);
+
+								let head: string[] = event.ref.split('/');
+								let base: string;
+
+								if (head.last() === 'development') {
+
+									// Get latest release and release branch
+									let release: Release = await repo.GetLatestReleaseAsync();
+									let reference: Reference = await repo.GetLatestReferenceAsync('heads/release');
+
+									// No release or release branch found
+									if (release == null && reference == null) {
+
+										// Milestone set on issue
+										if (issue.milestone != null) {
+
+											// Create a new branch with the last commit to development
+											reference = await repo.CreateReferenceAsync(`refs/heads/release/${issue.milestone.title}`, event.before);
+											base = reference.ref;
+										}
+									}
+
+									// No release but release, but release branch is found
+									else if (release == null && reference != null) {
+										base = reference.ref;
+									}
+
+									else {
+										let refVersion: Version = reference.GetVersion();
+										let releaseVersion: Version = release.GetVersion();
+
+										// Latest branch is ahead of latest release
+										if (refVersion.IsGreaterThen(releaseVersion)) {
+											base = reference.ref;
+										}
+
+										else {
+
+											// Milestone set on issue
+											if (issue.milestone != null) {
+
+												// Create a new branch with the last commit to development
+												await repo.CreateReferenceAsync(`refs/heads/release/${issue.milestone.title}`, event.before);
+												base = reference.ref;
+											}
+										}
+									}
+								}
+
+								else if (head[head.length - 2] === 'hotfix' || head[head.length - 2] === 'release') {
+									base = 'refs/heads/master';
+								}
+
+								else {
+									base = 'refs/heads/development';
+								}
+
+								// Creates a pull request if one don't aleady exists
+								if ((await repo.ListPullRequestsAsync(event.ref, base)).length === 0) {
+									let pullRequest: PullRequest = await repo.CreatePullRequestAsync(event.ref, base, issue.title, `This resolves #${issue.number}`);
+
+									// Request review from me since Creeper-bot is the one opening it
+									await pullRequest.RequestReviewAsync('BrunoBlanes');
+								}
 							}
 						}
 					}
