@@ -15,7 +15,7 @@ export class Commit {
 
 /** Return a list with all the issues mentioned. */
 	public GetMention(): Mention | null {
-		let message: string = this.message.toLowerCase();
+		let message: string = this.message.toLowerCase().replace('\n', ' ');
 		let match: RegExpMatchArray = message.match(regex);
 
 		// Issue mention found
@@ -36,10 +36,10 @@ export class Commit {
 						return new Mention(+match[0].remove(0, 1), true);
 					}
 				}
-
-				// Return an open issue mention
-				return new Mention(+match[0].remove(0, 1), false);
 			}
+
+			// Return an open issue mention
+			return new Mention(+match[0].remove(0, 1), false);
 		}
 
 		return null;
