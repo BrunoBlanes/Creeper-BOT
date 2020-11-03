@@ -1,12 +1,11 @@
 import { Card, Project, Column, CardEvent } from './GitHubApi/Project';
 import { createServer, IncomingMessage, ServerResponse } from 'http';
-import { PushEvent, Mention, Commit } from './GitHubApi/Push';
 import { Issue, IssueEvent } from './GitHubApi/Issue';
 import { Milestone } from './GitHubApi/Milestone';
 import { Validator } from './Services/Azure';
 import { Octokit } from './Services/Octokit';
 import { Label } from './GitHubApi/Label';
-import '../Extensions/Arrays';
+import './Extensions/Arrays';
 
 createServer((request: IncomingMessage, response: ServerResponse) => {
 
