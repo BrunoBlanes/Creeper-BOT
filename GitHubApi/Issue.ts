@@ -177,26 +177,19 @@ export class Issue {
 
 	/** Get the associated project card. */
 	public async GetProjectCardAsync(): Promise<Card> {
-		let columnName: string | null;
+		let columnName: string | undefined | null;
 
 		for (let label of this.labels) {
-			switch (label.name) {
-				case 'Triage': {
-					columnName = 'Triage';
-					break;
-				}
-				case 'Working': {
-					columnName = 'In progress';
-					break;
-				}
-				case 'Complete' || label.name === 'Fixed' || label.name === 'Awaiting PR': {
-					columnName = 'Done';
-					break;
-				}
-				default: {
-					columnName = null;
-					break;
-				}
+			if (label.name === 'Triage') {
+				columnName = 'Triage';
+			}
+
+			else if (label.name === 'Working') {
+				columnName = 'In progress';
+			}
+
+			else if (label.name === 'Complete' || label.name === 'Fixed' || label.name === 'Awaiting Pull Request') {
+				columnName = 'Done';
 			}
 		}
 
