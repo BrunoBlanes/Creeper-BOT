@@ -48,7 +48,7 @@ export class Repository {
 	 * @param head Filter pulls by head user or head organization and branch name in the format of user:ref-name or organization:ref-name.
 	 * @param base Filter pulls by base branch name. Example: gh-pages.
 	 */
-	public ListPullRequestsAsync(head: string, base: string): Promise<PullRequest[]> {
+	public ListPullRequestsAsync(head?: string, base?: string): Promise<PullRequest[]> {
 		return PullRequest.ListAsync(this.owner.login, this.name, head, base);
 	}
 

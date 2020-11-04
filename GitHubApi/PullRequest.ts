@@ -44,7 +44,7 @@ export class PullRequest {
 	 * @param head Filter pulls by head user or head organization and branch name in the format of user:ref-name or organization:ref-name.
 	 * @param base Filter pulls by base branch name. Example: gh-pages.
 	 */
-	public static async ListAsync(owner: string, repo: string, head: string, base: string): Promise<PullRequest[]> {
+	public static async ListAsync(owner: string, repo: string, head?: string, base?: string): Promise<PullRequest[]> {
 		let response = await Octokit.Client.request('GET /repos/:owner/:repo/pulls', {
 			owner: owner,
 			repo: repo,

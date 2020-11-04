@@ -319,7 +319,7 @@ createServer((request: IncomingMessage, response: ServerResponse) => {
 								}
 
 								// Creates a pull request if one don't aleady exists
-								if ((await repo.ListPullRequestsAsync(event.ref, base)).length === 0) {
+								if ((await repo.ListPullRequestsAsync(`${event.sender.login}:${event.ref}`)).length === 0) {
 									let pullRequest: PullRequest = await repo.CreatePullRequestAsync(event.ref, base, issue.title, `This resolves #${issue.number}`);
 
 									// Request review from me since Creeper-bot is the one opening it
