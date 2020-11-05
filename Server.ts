@@ -1,16 +1,16 @@
+import { PullRequest, PullRequestEvent } from './GitHubApi/PullRequest';
 import { Card, Project, Column, CardEvent } from './GitHubApi/Project';
 import { createServer, IncomingMessage, ServerResponse } from 'http';
+import { Version, Release } from './GitHubApi/Release';
 import { Issue, IssueEvent } from './GitHubApi/Issue';
 import { PushEvent, Mention } from './GitHubApi/Push';
 import { Repository } from './GitHubApi/Repository';
 import { Milestone } from './GitHubApi/Milestone';
-import { Version, Release } from './GitHubApi/Release';
+import { Reference } from './GitHubApi/Reference';
 import { Validator } from './Services/Azure';
 import { Octokit } from './Services/Octokit';
 import { Label } from './GitHubApi/Label';
 import './Extensions/Arrays';
-import { Reference } from './GitHubApi/Reference';
-import { PullRequest } from './GitHubApi/PullRequest';
 
 createServer((request: IncomingMessage, response: ServerResponse) => {
 
@@ -91,7 +91,7 @@ createServer((request: IncomingMessage, response: ServerResponse) => {
 
 				// Handle project cards events
 				// https://docs.github.com/en/developers/webhooks-and-events/webhook-events-and-payloads#project_card
-				if (request.headers['x-github-event'].toString() === 'project_card') {
+				else if (request.headers['x-github-event'].toString() === 'project_card') {
 
 					// Parse request body as json and set aliases
 					let jsonPayload: any = JSON.parse(body);
@@ -150,7 +150,7 @@ createServer((request: IncomingMessage, response: ServerResponse) => {
 							}
 
 							// Card moved event
-							if (event.action === 'moved') {
+							else if (event.action === 'moved') {
 
 								// Content is an issue
 								if (card.IsContentAnIssue()) {
@@ -340,7 +340,42 @@ createServer((request: IncomingMessage, response: ServerResponse) => {
 					}
 				}
 
-				if (response.getHeader("statusCode") !== 202) {
+				// Handle pull request events
+				// https://docs.github.com/en/free-pro-team@latest/developers/webhooks-and-events/webhook-events-and-payloads#pull_request
+				else if (request.headers['x-github-event'].toString() === 'pull_request') {
+					let jsonPayload: any = JSON.parse(body);
+
+					// Parse request body as json and set aliases
+					let event: PullRequestEvent = new PullRequestEvent(jsonPayload);
+					let pullRequest: PullRequest = event.pull_request;
+					let repo: Repository = event.repository;
+
+					// Create Octokit client with the current installation id
+					await Octokit.SetClientAsync(event.installation.id);
+
+					// Event is related to the 'Average CRM' repo
+					if (event.repository.name === 'Average-CRM') {
+
+						// Pull request closed event
+						if (event.action === 'closed') {
+
+							// Pull request has been merged
+							if (pullRequest.merged) {
+
+								// Move issue to 'Done' column
+								let mention: Mention = pullRequest.GetMention();
+								let issue: Issue = await repo.GetIssueAsync(mention.content_id);
+								let project: Project = await issue.GetProjectAsync();
+								let card: Card = await issue.GetProjectCardAsync();
+								let column: Column = await project.GetColumnAsync('Done');
+								await card.MoveAsync(column);
+								response.writeHead(202);
+							}
+						}
+					}
+				}
+
+				if (response.statusCode !== 202) {
 					response.writeHead(404);
 				}
 
