@@ -48,6 +48,8 @@ createServer((request: IncomingMessage, response: ServerResponse) => {
 							if (issue.milestone == null) {
 								await issue.AddLabelAsync('Triage');
 							}
+
+							response.writeHead(202);
 						}
 
 						// New label added event
@@ -55,6 +57,8 @@ createServer((request: IncomingMessage, response: ServerResponse) => {
 							if (await event.repository.GetProjectAsync(event.label.name) != null) {
 								await issue.CreateProjectCardAsync();
 							}
+
+							response.writeHead(202);
 						}
 
 						// Issue closed event
@@ -80,6 +84,7 @@ createServer((request: IncomingMessage, response: ServerResponse) => {
 							// Push the remaining labels to the label name array
 							issue.labels.forEach(x => { labels.push(x.name); });
 							await issue.UpdateAsync(labels);
+							response.writeHead(202);
 						}
 					}
 				}
@@ -140,6 +145,7 @@ createServer((request: IncomingMessage, response: ServerResponse) => {
 									}
 
 									await issue.UpdateAsync(labels, milestoneNumber);
+									response.writeHead(202);
 								}
 							}
 
@@ -228,6 +234,8 @@ createServer((request: IncomingMessage, response: ServerResponse) => {
 											}
 										}
 									}
+
+									response.writeHead(202);
 								}
 							}
 						}
@@ -327,8 +335,16 @@ createServer((request: IncomingMessage, response: ServerResponse) => {
 								}
 							}
 						}
+
+						response.writeHead(202);
 					}
 				}
+
+				if (response.getHeader("statusCode") !== 202) {
+					response.writeHead(404);
+				}
+
+				response.end();
 			}
 
 			else {
