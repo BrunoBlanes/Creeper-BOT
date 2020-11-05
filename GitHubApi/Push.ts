@@ -13,13 +13,13 @@ const regex: RegExp = /#[1-9][0-9]*/;
 
 export class Commit {
 
-/** Return a list with all the issues mentioned. */
+	/** Return a list with all the issues mentioned. */
 	public GetMention(): Mention | null {
 		let message: string = this.message.toLowerCase().replace('\n', ' ');
 		let match: RegExpMatchArray = message.match(regex);
 
 		// Issue mention found
-		while (match !== null) {
+		if (match !== null) {
 
 			for (let keyword of keywords) {
 

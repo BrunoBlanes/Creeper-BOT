@@ -1,10 +1,13 @@
 import { Octokit } from '../Services/Octokit';
 import { Repository } from './Repository';
+import { Installation } from './Webhook';
 import { Milestone } from './Milestone';
 import { Label } from './Label';
 import { User } from './User';
+import { Mention } from './Push';
 
 export class PullRequest {
+
 	/**
 	 * Create a pull request.
 	 * https://docs.github.com/en/free-pro-team@latest/rest/reference/pulls#create-a-pull-request
@@ -96,6 +99,40 @@ export class PullRequest {
 
 		throw new Error(`Could not request review for pull request ${this.id}.\n Octokit returned error ${response.status}.`);
 	}
+
+	/** Return a list with all the issues mentioned. */
+	public GetMention(): Mention | null {
+		let message: string = this.body.toLowerCase().replace('\n', ' ');
+		let match: RegExpMatchArray = message.match(/#[1-9][0-9]*/);
+
+		// Issue mention found
+		if (match !== null) {
+			return new Mention(+match[0].remove(0, 1), false);
+		}
+
+		return null;
+	}
+}
+
+export class PullRequestEvent {
+	constructor(jsonPayload: PullRequestEvent) {
+		this.pull_request = Object.assign(new PullRequest(), jsonPayload.pull_request);
+		this.repository = Object.assign(new Repository(), jsonPayload.repository);
+
+		this.action = jsonPayload.action;
+		this.number = jsonPayload.number;
+		this.sender = jsonPayload.sender;
+		this.installation = jsonPayload.installation;
+	}
+}
+
+export interface PullRequestEvent {
+	action: string;
+	number: number;
+	pull_request: PullRequest;
+	repository: Repository;
+	sender: User;
+	installation: Installation;
 }
 
 export interface PullRequest {
@@ -122,10 +159,10 @@ export interface PullRequest {
 	active_lock_reason: string;
 	created_at: Date;
 	updated_at: Date;
-	closed_at: Date;
-	merged_at: Date;
-	merge_commit_sha: string;
-	assignee: User;
+	closed_at?: Date;
+	merged_at?: Date;
+	merge_commit_sha?: string;
+	assignee?: User;
 	assignees: User[];
 	requested_reviewers: User[];
 	requested_teams: Team[];
@@ -134,10 +171,10 @@ export interface PullRequest {
 	author_association: string;
 	draft: boolean;
 	merged: boolean;
-	mergeable: boolean;
-	rebaseable: boolean;
+	mergeable?: boolean;
+	rebaseable?: boolean;
 	mergeable_state: string;
-	merged_by: User;
+	merged_by?: User;
 	comments: number;
 	review_comments: number;
 	maintainer_can_modify: boolean;
