@@ -376,6 +376,9 @@ createServer((request: IncomingMessage, response: ServerResponse) => {
 												// Close the issue
 												let issue: Issue = await repo.GetIssueAsync(mention.content_id);
 												await issue.UpdateAsync(undefined, undefined, 'closed');
+
+												// Add nice comment
+												await issue.CreateCommentAsync(`Thank you for your contribution! This issue was ${issue.labels.some((label: Label) => label.name === 'Bug') ? 'fixed' : 'resolved'} and will be implemented in the next release.`);
 											}
 										}
 
