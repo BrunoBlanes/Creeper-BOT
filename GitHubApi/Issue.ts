@@ -213,18 +213,19 @@ export class Issue {
 	 * Update issue labels.
 	 * https://docs.github.com/en/rest/reference/issues#update-an-issue
 	 * @param labels An array of label names to replace current labels.
-	 * @param milestone The number of the milestone to be added to this issue.
-	 * Set to -1 to remove the current milestone. If ommited, it stays unchanged.
+	 * @param milestone The number of the milestone to associate this issue with or null to remove current.
+	 * @param state State of the issue. Either open or closed.
 	 */
-	public async UpdateAsync(labels: string[], milestone: number = 0): Promise<Issue> {
+	public async UpdateAsync(labels?: string[], milestone?: number, state?: 'open' | 'closed'): Promise<Issue> {
 		let response = await Octokit.Client.request('PATCH /repos/:owner/:repo/issues/:issue_number', {
 			owner: this.repository.owner.login,
 			repo: this.repository.name,
 			issue_number: this.number,
-			milestone: (milestone === 0)
+			milestone: (milestone === undefined)
 				? this.milestone.number
 				: milestone,
-			labels: labels
+			labels: labels ?? this.labels.map(function (label: Label) { return label.name; }),
+			state: state
 		});
 
 		if (response.status === 200) {

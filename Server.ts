@@ -328,7 +328,7 @@ createServer((request: IncomingMessage, response: ServerResponse) => {
 
 								// Creates a pull request if one don't aleady exists
 								if ((await repo.ListPullRequestsAsync(`${event.sender.login}:${event.ref}`)).length === 0) {
-									let pullRequest: PullRequest = await repo.CreatePullRequestAsync(event.ref, base, issue.title, `This resolves #${issue.number}`);
+									let pullRequest: PullRequest = await repo.CreatePullRequestAsync(event.ref, base, issue.title, `Resolves #${issue.number}`);
 
 									// Request review from me since Creeper-bot is the one opening it
 									await pullRequest.RequestReviewAsync('BrunoBlanes');
@@ -361,16 +361,37 @@ createServer((request: IncomingMessage, response: ServerResponse) => {
 
 							// Pull request has been merged
 							if (pullRequest.merged) {
+								for (let commit of await pullRequest.GetCommitsAsync()) {
+									let mention: Mention = commit.GetMention();
 
-								// Move issue to 'Done' column
-								let mention: Mention = pullRequest.GetMention();
-								let issue: Issue = await repo.GetIssueAsync(mention.content_id);
-								let project: Project = await issue.GetProjectAsync();
-								let card: Card = await issue.GetProjectCardAsync();
-								let column: Column = await project.GetColumnAsync('Done');
-								await card.MoveAsync(column);
-								response.writeHead(202);
+									if (mention != null) {
+
+										// Commits to master reference pull requests
+										if (pullRequest.base.ref === 'master') {
+											let pr: PullRequest = await repo.GetPullRequestAsync(mention.content_id);
+											mention = pr.GetMention();
+
+											if (mention != null) {
+
+												// Close the issue
+												let issue: Issue = await repo.GetIssueAsync(mention.content_id);
+												await issue.UpdateAsync(undefined, undefined, 'closed');
+											}
+										}
+
+										else {
+											// Move issue to 'Done' column
+											let issue: Issue = await repo.GetIssueAsync(mention.content_id);
+											let project: Project = await issue.GetProjectAsync();
+											let card: Card = await issue.GetProjectCardAsync();
+											let column: Column = await project.GetColumnAsync('Done');
+											await card.MoveAsync(column);
+										}
+									}
+								}
 							}
+
+							response.writeHead(202);
 						}
 					}
 				}

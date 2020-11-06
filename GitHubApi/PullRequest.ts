@@ -1,12 +1,32 @@
 import { Octokit } from '../Services/Octokit';
 import { Repository } from './Repository';
 import { Installation } from './Webhook';
+import { Mention, Commit } from './Push';
 import { Milestone } from './Milestone';
 import { Label } from './Label';
 import { User } from './User';
-import { Mention } from './Push';
 
 export class PullRequest {
+	/**
+	 * Get a pull request.
+	 * https://docs.github.com/en/free-pro-team@latest/rest/reference/pulls#get-a-pull-request
+	 * @param owner
+	 * @param repo
+	 * @param number
+	 */
+	public static async GetAsync(owner: string, repo: string, number: number): Promise<PullRequest> {
+		let response = await Octokit.Client.request('GET /repos/:owner/:repo/pulls/:pull_number', {
+			owner: owner,
+			repo: repo,
+			pull_number: number
+		});
+
+		if (response.status === 200) {
+			return Object.assign(new PullRequest(), response.data);
+		}
+
+		throw new Error(`Could not retrieve pull request number ${number} from repository "${repo}".\n Octokit returned error ${response.status}.`);
+	}
 
 	/**
 	 * Create a pull request.
@@ -98,6 +118,30 @@ export class PullRequest {
 		}
 
 		throw new Error(`Could not request review for pull request ${this.id}.\n Octokit returned error ${response.status}.`);
+	}
+
+	/**
+	 * List commits on a pull request
+	 * https://docs.github.com/en/free-pro-team@latest/rest/reference/pulls#list-commits-on-a-pull-request
+	 */
+	public async GetCommitsAsync(): Promise<Commit[]> {
+		let response = await Octokit.Client.request('GET /repos/:owner/:repo/pulls/:pull_number/commits', {
+			owner: this.base.repo.owner.login,
+			repo: this.base.repo.name,
+			pull_number: this.number
+		})
+
+		if (response.status === 200) {
+			let commits: Commit[] = [];
+
+			for (let commit of response.data) {
+				commits.push(Object.assign(new Commit(), commit.commit));
+			}
+
+			return commits;
+		}
+
+		throw new Error(`Could not retrieve the list of commits from pull request ${this.id}.\n Octokit returned error ${response.status}.`);
 	}
 
 	/** Return a list with all the issues mentioned. */

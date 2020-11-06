@@ -6,6 +6,7 @@ import { Project } from './Project';
 import { Issue } from './Issue';
 import { User } from './User';
 import '../Extensions/Arrays';
+import { PurgeDeletedSecretOptions } from '@azure/keyvault-secrets';
 
 export class Repository {
 	/** Return a list of milestones for the current repo. */
@@ -30,6 +31,15 @@ export class Repository {
 	public async GetProjectAsync(name: string, state: 'open' | 'closed' | 'all' = 'open'): Promise<Project> {
 		let projects: Project[] = await Project.ListAsync(this.owner.login, this.name, state);
 		return projects.find((project: Project) => project.name === name);
+	}
+
+	/**
+	 * Get a pull request
+	 * https://docs.github.com/en/free-pro-team@latest/rest/reference/pulls#get-a-pull-request
+	 * @param number
+	 */
+	public GetPullRequestAsync(number: number): Promise<PullRequest> {
+		return PullRequest.GetAsync(this.owner.login, this.name, number);
 	}
 
 	/**
