@@ -14,18 +14,23 @@ export class PullRequest {
 	 * @param repo
 	 * @param number
 	 */
-	public static async GetAsync(owner: string, repo: string, number: number): Promise<PullRequest> {
-		let response = await Octokit.Client.request('GET /repos/:owner/:repo/pulls/:pull_number', {
-			owner: owner,
-			repo: repo,
-			pull_number: number
-		});
+	public static async GetAsync(owner: string, repo: string, number: number): Promise<PullRequest | null> {
+		try {
+			let response = await Octokit.Client.request('GET /repos/:owner/:repo/pulls/:pull_number', {
+				owner: owner,
+				repo: repo,
+				pull_number: number
+			});
 
-		if (response.status === 200) {
-			return Object.assign(new PullRequest(), response.data);
+			if (response.status === 200) {
+				return Object.assign(new PullRequest(), response.data);
+			}
 		}
 
-		throw new Error(`Could not retrieve pull request number ${number} from repository "${repo}".\n Octokit returned error ${response.status}.`);
+		catch (e) {
+			console.error(`Could not retrieve pull request number ${number} from repository "${repo}".\n${e}`);
+			return null;
+		}
 	}
 
 	/**
@@ -38,25 +43,26 @@ export class PullRequest {
 	 * @param title The title of the new pull request.
 	 * @param body The contents of the pull request.
 	 */
-	public static async CreateAsync(owner: string, repo: string, head: string, base: string, title: string, body: string): Promise<PullRequest> {
-		let response = await Octokit.Client.request('POST /repos/:owner/:repo/pulls', {
-			owner: owner,
-			repo: repo,
-			head: head,
-			base: base,
-			title: title,
-			body: body
-		});
+	public static async CreateAsync(owner: string, repo: string, head: string, base: string, title: string, body: string): Promise<PullRequest | null> {
+		try {
+			let response = await Octokit.Client.request('POST /repos/:owner/:repo/pulls', {
+				owner: owner,
+				repo: repo,
+				head: head,
+				base: base,
+				title: title,
+				body: body
+			});
 
-		if (response.status === 201) {
-			return Object.assign(new PullRequest(), response.data);
+			if (response.status === 201) {
+				return Object.assign(new PullRequest(), response.data);
+			}
 		}
 
-		else if (response.status === 403) {
-			throw new Error(`Creeper-bot does not have sufficient privileges to create a pull request at ${repo}.`);
+		catch (e) {
+			console.error(`Could not create pull request on repository "${repo}".\n${e}`);
+			return null;
 		}
-
-		throw new Error(`Could not create pull request on repository "${repo}".\n Octokit returned error ${response.status}.`);
 	}
 
 	/**
@@ -67,25 +73,30 @@ export class PullRequest {
 	 * @param head Filter pulls by head user or head organization and branch name in the format of user:ref-name or organization:ref-name.
 	 * @param base Filter pulls by base branch name. Example: gh-pages.
 	 */
-	public static async ListAsync(owner: string, repo: string, head?: string, base?: string): Promise<PullRequest[]> {
-		let response = await Octokit.Client.request('GET /repos/:owner/:repo/pulls', {
-			owner: owner,
-			repo: repo,
-			head: head,
-			base: base
-		});
+	public static async ListAsync(owner: string, repo: string, head?: string, base?: string): Promise<PullRequest[] | null> {
+		try {
+			let response = await Octokit.Client.request('GET /repos/:owner/:repo/pulls', {
+				owner: owner,
+				repo: repo,
+				head: head,
+				base: base
+			});
 
-		if (response.status === 200) {
-			let pullRequests: PullRequest[] = [];
+			if (response.status === 200) {
+				let pullRequests: PullRequest[] = [];
 
-			for (let pullRequest of response.data) {
-				pullRequests.push(Object.assign(new PullRequest(), pullRequest));
+				for (let pullRequest of response.data) {
+					pullRequests.push(Object.assign(new PullRequest(), pullRequest));
+				}
+
+				return pullRequests;
 			}
-
-			return pullRequests;
 		}
 
-		throw new Error(`Could not retrieve a list of pull requests from repository "${repo}".\n Octokit returned error ${response.status}.`);
+		catch (e) {
+			console.error(`Could not retrieve a list of pull requests from repository "${repo}".\n${e}`);
+			return null;
+		}
 	}
 
 	/**
@@ -93,7 +104,7 @@ export class PullRequest {
 	 * https://docs.github.com/en/free-pro-team@latest/rest/reference/pulls#request-reviewers-for-a-pull-request
 	 * @param reviewer The user login that will be requested.
 	 */
-	public RequestReviewAsync(reviewer: string): Promise<PullRequest> {
+	public RequestReviewAsync(reviewer: string): Promise<PullRequest | null> {
 		return this.RequestReviewersAsync([reviewer]);
 	}
 
@@ -102,46 +113,52 @@ export class PullRequest {
 	 * https://docs.github.com/en/free-pro-team@latest/rest/reference/pulls#request-reviewers-for-a-pull-request
 	 * @param reviewers An array of user logins that will be requested.
 	 */
-	public async RequestReviewersAsync(reviewers: string[]): Promise<PullRequest> {
-		let response = await Octokit.Client.request('POST /repos/{owner}/{repo}/pulls/{pull_number}/requested_reviewers', {
-			owner: this.base.repo.owner.login,
-			repo: this.base.repo.name,
-			reviewers: reviewers
-		});
+	public async RequestReviewersAsync(reviewers: string[]): Promise<PullRequest | null> {
+		try {
+			let response = await Octokit.Client.request('POST /repos/{owner}/{repo}/pulls/{pull_number}/requested_reviewers', {
+				owner: this.base.repo.owner.login,
+				repo: this.base.repo.name,
+				reviewers: reviewers
+			});
 
-		if (response.status === 201) {
-			return Object.assign(new PullRequest(), response.data);
+			if (response.status === 201) {
+				return Object.assign(new PullRequest(), response.data);
+			}
 		}
 
-		else if (response.status === 403) {
-			throw new Error(`Creeper-bot does not have sufficient privileges to reques reviewers at ${this.base.repo.name}.`);
+		catch (e) {
+			console.error(`Could not request review for pull request ${this.id}.\n${e}`);
+			return null;
 		}
-
-		throw new Error(`Could not request review for pull request ${this.id}.\n Octokit returned error ${response.status}.`);
 	}
 
 	/**
 	 * List commits on a pull request
 	 * https://docs.github.com/en/free-pro-team@latest/rest/reference/pulls#list-commits-on-a-pull-request
 	 */
-	public async GetCommitsAsync(): Promise<Commit[]> {
-		let response = await Octokit.Client.request('GET /repos/:owner/:repo/pulls/:pull_number/commits', {
-			owner: this.base.repo.owner.login,
-			repo: this.base.repo.name,
-			pull_number: this.number
-		})
+	public async GetCommitsAsync(): Promise<Commit[] | null> {
+		try {
+			let response = await Octokit.Client.request('GET /repos/:owner/:repo/pulls/:pull_number/commits', {
+				owner: this.base.repo.owner.login,
+				repo: this.base.repo.name,
+				pull_number: this.number
+			});
 
-		if (response.status === 200) {
-			let commits: Commit[] = [];
+			if (response.status === 200) {
+				let commits: Commit[] = [];
 
-			for (let commit of response.data) {
-				commits.push(Object.assign(new Commit(), commit.commit));
+				for (let commit of response.data) {
+					commits.push(Object.assign(new Commit(), commit.commit));
+				}
+
+				return commits;
 			}
-
-			return commits;
 		}
 
-		throw new Error(`Could not retrieve the list of commits from pull request ${this.id}.\n Octokit returned error ${response.status}.`);
+		catch (e) {
+			console.error(`Could not retrieve the list of commits from pull request ${this.id}.\n${e}`);
+			return null;
+		}
 	}
 
 	/** Return a list with all the issues mentioned. */

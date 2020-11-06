@@ -362,23 +362,26 @@ createServer((request: IncomingMessage, response: ServerResponse) => {
 							// Pull request has been merged
 							if (pullRequest.merged) {
 								for (let commit of await pullRequest.GetCommitsAsync()) {
-									let mention: Mention = commit.GetMention();
+									let mention: Mention | null = commit.GetMention();
 
 									if (mention != null) {
 
 										// Commits to master reference pull requests
 										if (pullRequest.base.ref === 'master') {
-											let pr: PullRequest = await repo.GetPullRequestAsync(mention.content_id);
-											mention = pr.GetMention();
+											let pr: PullRequest | null = await repo.GetPullRequestAsync(mention.content_id);
 
-											if (mention != null) {
+											if (pr != null) {
+												mention = pr.GetMention();
 
-												// Close the issue
-												let issue: Issue = await repo.GetIssueAsync(mention.content_id);
-												await issue.UpdateAsync(undefined, undefined, 'closed');
+												if (mention != null) {
 
-												// Add nice comment
-												await issue.CreateCommentAsync(`Thank you for your contribution! This issue was ${issue.labels.some((label: Label) => label.name === 'Bug') ? 'fixed' : 'resolved'} and will be implemented in the next release.`);
+													// Close the issue
+													let issue: Issue = await repo.GetIssueAsync(mention.content_id);
+													await issue.UpdateAsync(undefined, undefined, 'closed');
+
+													// Add nice comment
+													await issue.CreateCommentAsync(`Thank you for your contribution! This issue was ${issue.labels.some((label: Label) => label.name === 'Bug') ? 'fixed' : 'resolved'} and will be implemented in the next release.`);
+												}
 											}
 										}
 

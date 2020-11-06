@@ -38,7 +38,7 @@ export class Repository {
 	 * https://docs.github.com/en/free-pro-team@latest/rest/reference/pulls#get-a-pull-request
 	 * @param number
 	 */
-	public GetPullRequestAsync(number: number): Promise<PullRequest> {
+	public GetPullRequestAsync(number: number): Promise<PullRequest | null> {
 		return PullRequest.GetAsync(this.owner.login, this.name, number);
 	}
 
@@ -49,7 +49,7 @@ export class Repository {
 	 * @param title The title of the new pull request.
 	 * @param body The contents of the pull request.
 	 */
-	public CreatePullRequestAsync(head: string, base: string, title: string, body: string): Promise<PullRequest> {
+	public CreatePullRequestAsync(head: string, base: string, title: string, body: string): Promise<PullRequest | null> {
 		return PullRequest.CreateAsync(this.owner.login, this.name, head, base, title, body);
 	}
 
@@ -58,7 +58,7 @@ export class Repository {
 	 * @param head Filter pulls by head user or head organization and branch name in the format of user:ref-name or organization:ref-name.
 	 * @param base Filter pulls by base branch name. Example: gh-pages.
 	 */
-	public ListPullRequestsAsync(head?: string, base?: string): Promise<PullRequest[]> {
+	public ListPullRequestsAsync(head?: string, base?: string): Promise<PullRequest[] | null> {
 		return PullRequest.ListAsync(this.owner.login, this.name, head, base);
 	}
 

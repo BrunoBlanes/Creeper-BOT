@@ -14,30 +14,23 @@ export class Issue {
 	 * @param repo
 	 * @param number
 	 */
-	public static async GetAsync(owner: string, repo: string, number: number): Promise<Issue> {
-		let response = await Octokit.Client.request('GET /repos/:owner/:repo/issues/:issue_number', {
-			owner: owner,
-			repo: repo,
-			issue_number: number
-		});
+	public static async GetAsync(owner: string, repo: string, number: number): Promise<Issue | null> {
+		try {
+			let response = await Octokit.Client.request('GET /repos/:owner/:repo/issues/:issue_number', {
+				owner: owner,
+				repo: repo,
+				issue_number: number
+			});
 
-		if (response.status === 200) {
-			return Object.assign(new Issue(), response.data);
+			if (response.status === 200) {
+				return Object.assign(new Issue(), response.data);
+			}
 		}
 
-		else if (response.status === 301) {
-			throw new Error(`The issue ${number} at repository "${repo}" was permanently moved to "${response.headers.location}".`);
+		catch (e) {
+			console.error(`Could not retrieve issue ${number} from repository "${repo}".\n${e}`);
+			return null;
 		}
-
-		else if (response.status === 404) {
-			throw new Error(`The issue ${number} might have been transfered to or deleted from a repository you do not have read access to.`);
-		}
-
-		else if (response.status === 410) {
-			throw new Error(`The issue ${number} has been permanently deleted from the repository "${repo}".`);
-		}
-
-		throw new Error(`Could not retrieve issue ${number} from repository "${repo}".\n Octokit returned error ${response.status}.`);
 	}
 
 	/**
@@ -45,7 +38,7 @@ export class Issue {
 	 * https://docs.github.com/en/rest/reference/issues#add-labels-to-an-issue
 	 * @param label The name of the label to add to the issue.
 	 */
-	public async AddLabelAsync(label: string): Promise<Label[]> {
+	public async AddLabelAsync(label: string): Promise<Label[] | null> {
 		return this.AddLabelsAsync([label]);
 	}
 
@@ -54,20 +47,25 @@ export class Issue {
 	 * https://docs.github.com/en/rest/reference/issues#add-labels-to-an-issue
 	 * @param labels The name of the labels to add to the issue.
 	 */
-	public async AddLabelsAsync(labels: Array<string>): Promise<Label[]> {
-		let response = await Octokit.Client.request('POST /repos/:owner/:repo/issues/:issue_number/labels', {
-			owner: this.repository.owner.login,
-			repo: this.repository.name,
-			issue_number: this.number,
-			labels: labels
-		});
+	public async AddLabelsAsync(labels: Array<string>): Promise<Label[] | null> {
+		try {
+			let response = await Octokit.Client.request('POST /repos/:owner/:repo/issues/:issue_number/labels', {
+				owner: this.repository.owner.login,
+				repo: this.repository.name,
+				issue_number: this.number,
+				labels: labels
+			});
 
-		if (response.status === 200) {
-			this.labels = response.data;
-			return this.labels;
+			if (response.status === 200) {
+				this.labels = response.data;
+				return this.labels;
+			}
 		}
 
-		console.error(`Could not assign labels to issue number ${this.number} of repository "${this.repository.name}".\n Octokit returned error ${response.status}.`);
+		catch (e) {
+			console.error(`Could not assign labels to issue number ${this.number} of repository "${this.repository.name}".\n${e}`);
+			return null;
+		}
 	}
 
 	/**
@@ -77,7 +75,7 @@ export class Issue {
 	 * NOTE: Only users with push access can add assignees to an issue. Assignees are silently ignored otherwise.
 	 * @param assignee Username of the person to assign this issue to.
 	*/
-	public AddAssigneeAsync(assignee: string): Promise<User[]> {
+	public AddAssigneeAsync(assignee: string): Promise<User[] | null> {
 		return this.AddAssigneesAsync([assignee]);
 	}
 
@@ -88,43 +86,43 @@ export class Issue {
 	 * NOTE: Only users with push access can add assignees to an issue. Assignees are silently ignored otherwise.
 	 * @param assignees Usernames of the people to assign this issue to.
 	*/
-	public async AddAssigneesAsync(assignees: Array<string>): Promise<User[]> {
+	public async AddAssigneesAsync(assignees: Array<string>): Promise<User[] | null> {
 		if (assignees.length > 10) {
 			throw new Error('Maximum number of assignees allowed is 10.');
 		}
 
 		for (let assignee of assignees) {
-			let response = await Octokit.Client.request('GET /repos/:owner/:repo/assignees/:assignee', {
-				owner: this.repository.owner.login,
-				repo: this.repository.name,
-				assignee: assignee
-			});
-
-			if (response.status === 404) {
-				assignees.splice(assignees.indexOf(assignee), 1);
-				console.warn(`User "${assignee}" does not have permission to be assigned to issue ${this.number} of repository "${this.repository.name}".`);
+			try {
+				let response = await Octokit.Client.request('GET /repos/:owner/:repo/assignees/:assignee', {
+					owner: this.repository.owner.login,
+					repo: this.repository.name,
+					assignee: assignee
+				});
 			}
 
-			else if (response.status !== 204) {
-				assignees.splice(assignees.indexOf(assignee), 1);
-				console.error(`Could not check if user "${assignee}" has permission to be assigned to issue ${this.number} of repository "${this.repository.name}".\n Octokit returned error ${response.status}.`);
+			catch (e) {
+				console.error(`Could not check if user "${assignee}" has permission to be assigned to issue ${this.number} of repository "${this.repository.name}".\n${e}`);
 			}
 		}
 
 		if (assignees.length > 0) {
-			let response = await Octokit.Client.request('POST /repos/:owner/:repo/issues/:issue_number/assignees', {
-				owner: this.repository.owner.login,
-				repo: this.repository.name,
-				issue_number: this.number,
-				assignees: assignees
-			});
+			try {
+				let response = await Octokit.Client.request('POST /repos/:owner/:repo/issues/:issue_number/assignees', {
+					owner: this.repository.owner.login,
+					repo: this.repository.name,
+					issue_number: this.number,
+					assignees: assignees
+				});
 
-			if (response.status === 201) {
-				this.assignees = response.data.assignees;
-				return this.assignees;
+				if (response.status === 201) {
+					this.assignees = response.data.assignees;
+					return this.assignees;
+				}
 			}
 
-			throw new Error(`Could not add assignees to issue ${this.number} of repository "${this.repository.name}".\n Octokit returned error ${response.status}.`);
+			catch (e) {
+				console.error(`Could not add assignees to issue ${this.number} of repository "${this.repository.name}".\n${e}`);
+			}
 		}
 
 		return null;
@@ -145,7 +143,7 @@ export class Issue {
 	 * Create a project card.
 	 * https://docs.github.com/en/rest/reference/projects#create-a-project-card
 	 */
-	public async CreateProjectCardAsync(): Promise<Card> {
+	public async CreateProjectCardAsync(): Promise<Card | null> {
 		let project: Project = await this.GetProjectAsync();
 		let columnId: number;
 
@@ -157,26 +155,31 @@ export class Issue {
 			columnId = (await project.GetColumnAsync('Triage')).id;
 		}
 
-		let response = await Octokit.Client.request('POST /projects/columns/:column_id/cards', {
-			column_id: columnId,
-			content_id: this.id,
-			content_type: 'Issue',
-			mediaType: {
-				previews: [
-					'inertia'
-				]
-			}
-		});
+		try {
+			let response = await Octokit.Client.request('POST /projects/columns/:column_id/cards', {
+				column_id: columnId,
+				content_id: this.id,
+				content_type: 'Issue',
+				mediaType: {
+					previews: [
+						'inertia'
+					]
+				}
+			});
 
-		if (response.status === 201) {
-			return Object.assign(new Card(), response.data);
+			if (response.status === 201) {
+				return Object.assign(new Card(), response.data);
+			}
 		}
 
-		throw new Error(`Could not create card for issue ${this.id}.\n Octokit returned error ${response.status}.`);
+		catch (e) {
+			console.error(`Could not create a card for issue ${this.id}.\n${e}`);
+			return null;
+		}
 	}
 
 	/** Get the associated project card. */
-	public async GetProjectCardAsync(): Promise<Card> {
+	public async GetProjectCardAsync(): Promise<Card | null> {
 		let columnName: string | undefined | null;
 
 		for (let label of this.labels) {
@@ -206,7 +209,8 @@ export class Issue {
 			}
 		}
 
-		throw new Error(`Could not locate a card associated with issue ${this.id}.`);
+		console.error(`Could not locate a card associated with issue ${this.id}.`);
+		return null;
 	}
 
 	/**
@@ -216,23 +220,28 @@ export class Issue {
 	 * @param milestone The number of the milestone to associate this issue with or null to remove current.
 	 * @param state State of the issue. Either open or closed.
 	 */
-	public async UpdateAsync(labels?: string[], milestone?: number, state?: 'open' | 'closed'): Promise<Issue> {
-		let response = await Octokit.Client.request('PATCH /repos/:owner/:repo/issues/:issue_number', {
-			owner: this.repository.owner.login,
-			repo: this.repository.name,
-			issue_number: this.number,
-			milestone: (milestone === undefined)
-				? this.milestone.number
-				: milestone,
-			labels: labels ?? this.labels.map(function (label: Label) { return label.name; }),
-			state: state
-		});
+	public async UpdateAsync(labels?: string[], milestone?: number, state?: 'open' | 'closed'): Promise<Issue | null> {
+		try {
+			let response = await Octokit.Client.request('PATCH /repos/:owner/:repo/issues/:issue_number', {
+				owner: this.repository.owner.login,
+				repo: this.repository.name,
+				issue_number: this.number,
+				milestone: (milestone === undefined)
+					? this.milestone.number
+					: milestone,
+				labels: labels ?? this.labels.map(function (label: Label) { return label.name; }),
+				state: state
+			});
 
-		if (response.status === 200) {
-			return Object.assign(new Issue(), response.data);
+			if (response.status === 200) {
+				return Object.assign(new Issue(), response.data);
+			}
 		}
 
-		throw new Error(`Could not update labels for issue ${this.number} at "${this.repository.name}".\n Octokit returned error ${response.status}.`);
+		catch (e) {
+			console.error(`Could not update labels for issue ${this.number} at "${this.repository.name}".\n${e}`);
+			return null;
+		}
 	}
 
 	/**
@@ -241,15 +250,17 @@ export class Issue {
 	 * @param body The contents of the comment.
 	 */
 	public async CreateCommentAsync(body: string): Promise<void> {
-		let response = await Octokit.Client.request('POST /repos/:owner/:repo/issues/:issue_number/comments', {
-			owner: this.repository.owner.login,
-			repo: this.repository.name,
-			issue_number: this.number,
-			body: body
-		});
+		try {
+			let response = await Octokit.Client.request('POST /repos/:owner/:repo/issues/:issue_number/comments', {
+				owner: this.repository.owner.login,
+				repo: this.repository.name,
+				issue_number: this.number,
+				body: body
+			});
+		}
 
-		if (response.status !== 201) {
-			throw new Error(`Could not create a comment on issue ${this.number} at "${this.repository.name}".\n Octokit returned error ${response.status}.`);
+		catch (e) {
+			console.error(`Could not create a comment on issue ${this.number} at "${this.repository.name}".\n${e}`);
 		}
 	}
 }
