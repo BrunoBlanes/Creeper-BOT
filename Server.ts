@@ -379,6 +379,7 @@ createServer((request: IncomingMessage, response: ServerResponse) => {
 
 												// Add nice comment
 												await issue.CreateCommentAsync(`Thank you for your contribution! This issue was ${issue.labels.some((label: Label) => label.name === 'Bug') ? 'fixed' : 'resolved'} and will be implemented in the next release.`);
+
 											}
 										}
 
