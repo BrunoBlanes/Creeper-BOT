@@ -234,6 +234,24 @@ export class Issue {
 
 		throw new Error(`Could not update labels for issue ${this.number} at "${this.repository.name}".\n Octokit returned error ${response.status}.`);
 	}
+
+	/**
+	 * Create an issue comment.
+	 * https://docs.github.com/en/free-pro-team@latest/rest/reference/issues#create-an-issue-comment
+	 * @param body The contents of the comment.
+	 */
+	public async CreateCommentAsync(body: string): Promise<void> {
+		let response = await Octokit.Client.request('POST /repos/:owner/:repo/issues/:issue_number/comments', {
+			owner: this.repository.owner.login,
+			repo: this.repository.name,
+			issue_number: this.number,
+			body: body
+		});
+
+		if (response.status !== 201) {
+			throw new Error(`Could not create a comment on issue ${this.number} at "${this.repository.name}".\n Octokit returned error ${response.status}.`);
+		}
+	}
 }
 
 export class IssueEvent {
