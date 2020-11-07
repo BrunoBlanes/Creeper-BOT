@@ -34,16 +34,15 @@ export class PullRequest {
 	 * @param owner
 	 * @param repo
 	 * @param head The name of the branch where your changes are implemented.
-	 * @param base The name of the branch you want the changes pulled into.
 	 * @param title The title of the new pull request.
 	 * @param body The contents of the pull request.
 	 */
-	public static async CreateAsync(owner: string, repo: string, head: string, base: string, title: string, body: string): Promise<PullRequest> {
+	public static async CreateAsync(owner: string, repo: string, head: string, title: string, body: string): Promise<PullRequest> {
 		let response = await Octokit.Client.request('POST /repos/:owner/:repo/pulls', {
 			owner: owner,
 			repo: repo,
 			head: head,
-			base: base,
+			base: 'refs/heads/master',
 			title: title,
 			body: body
 		});
