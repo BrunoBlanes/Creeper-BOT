@@ -1,12 +1,10 @@
 import { PullRequest, PullRequestEvent } from './GitHubApi/PullRequest';
 import { Card, Project, Column, CardEvent } from './GitHubApi/Project';
 import { createServer, IncomingMessage, ServerResponse } from 'http';
-import { Version, Release } from './GitHubApi/Release';
 import { Issue, IssueEvent } from './GitHubApi/Issue';
 import { PushEvent, Mention } from './GitHubApi/Push';
 import { Repository } from './GitHubApi/Repository';
 import { Milestone } from './GitHubApi/Milestone';
-import { Reference } from './GitHubApi/Reference';
 import { Validator } from './Services/Azure';
 import { Octokit } from './Services/Octokit';
 import { Label } from './GitHubApi/Label';
@@ -270,65 +268,9 @@ createServer((request: IncomingMessage, response: ServerResponse) => {
 								// Move project card
 								await card.MoveAsync(column);
 
-								let head: string[] = event.ref.split('/');
-								let base: string;
-
-								if (head.last() === 'development') {
-
-									// Get latest release and release branch
-									let release: Release = await repo.GetLatestReleaseAsync();
-									let reference: Reference = await repo.GetLatestReferenceAsync('heads/release');
-
-									// No release or release branch found
-									if (release == null && reference == null) {
-
-										// Milestone set on issue
-										if (issue.milestone != null) {
-
-											// Create a new branch with the last commit to development
-											reference = await repo.CreateReferenceAsync(`refs/heads/release/${issue.milestone.title}`, event.before);
-											base = reference.ref;
-										}
-									}
-
-									// No release but release, but release branch is found
-									else if (release == null && reference != null) {
-										base = reference.ref;
-									}
-
-									else {
-										let refVersion: Version = reference.GetVersion();
-										let releaseVersion: Version = release.GetVersion();
-
-										// Latest branch is ahead of latest release
-										if (refVersion.IsGreaterThen(releaseVersion)) {
-											base = reference.ref;
-										}
-
-										else {
-
-											// Milestone set on issue
-											if (issue.milestone != null) {
-
-												// Create a new branch with the last commit to development
-												await repo.CreateReferenceAsync(`refs/heads/release/${issue.milestone.title}`, event.before);
-												base = reference.ref;
-											}
-										}
-									}
-								}
-
-								else if (head[head.length - 2] === 'hotfix' || head[head.length - 2] === 'release') {
-									base = 'refs/heads/master';
-								}
-
-								else {
-									base = 'refs/heads/development';
-								}
-
 								// Creates a pull request if one don't aleady exists
 								if ((await repo.ListPullRequestsAsync(`${event.sender.login}:${event.ref}`)).length === 0) {
-									let pullRequest: PullRequest = await repo.CreatePullRequestAsync(event.ref, base, issue.title, `Resolves #${issue.number}`);
+									let pullRequest: PullRequest = await repo.CreatePullRequestAsync(event.ref, issue.title, `Resolves #${issue.number}`);
 
 									// Request review from me since Creeper-bot is the one opening it
 									await pullRequest.RequestReviewAsync('BrunoBlanes');
@@ -379,7 +321,6 @@ createServer((request: IncomingMessage, response: ServerResponse) => {
 
 												// Add nice comment
 												await issue.CreateCommentAsync(`Thank you for your contribution! This issue was ${issue.labels.some((label: Label) => label.name === 'Bug') ? 'fixed' : 'resolved'} and will be implemented in the next release.`);
-
 											}
 										}
 
@@ -393,9 +334,9 @@ createServer((request: IncomingMessage, response: ServerResponse) => {
 										}
 									}
 								}
-							}
 
-							response.writeHead(202);
+								response.writeHead(202);
+							}
 						}
 					}
 				}
@@ -418,7 +359,7 @@ createServer((request: IncomingMessage, response: ServerResponse) => {
 
 	else if (request.method === 'GET') {
 		response.writeHead(200, { 'Content-Type': 'text/html' });
-		response.write('<p>Creeper-bot is a bot created by Bruno Blanes to automate his personal GitHub account.<p>You can find more about him at <a href="https://github.com/BrunoBlanes/Creeper-bot/">https://github.com/BrunoBlanes/Creeper-bot/</a>.<p>v1.0.0');
+		response.write('<p>Creeper-bot is a bot created by Bruno Blanes to automate his personal GitHub account.<p>You can find more about him at <a href="https://github.com/BrunoBlanes/Creeper-bot/">https://github.com/BrunoBlanes/Creeper-bot/</a>.<p>v1.2.1');
 		response.end();
 	}
 

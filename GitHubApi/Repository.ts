@@ -45,12 +45,11 @@ export class Repository {
 	/**
 	 * Create a pull request.
 	 * @param head The name of the branch where your changes are implemented.
-	 * @param base The name of the branch you want the changes pulled into.
 	 * @param title The title of the new pull request.
 	 * @param body The contents of the pull request.
 	 */
-	public CreatePullRequestAsync(head: string, base: string, title: string, body: string): Promise<PullRequest> {
-		return PullRequest.CreateAsync(this.owner.login, this.name, head, base, title, body);
+	public CreatePullRequestAsync(head: string, title: string, body: string): Promise<PullRequest> {
+		return PullRequest.CreateAsync(this.owner.login, this.name, head, title, body);
 	}
 
 	/**
