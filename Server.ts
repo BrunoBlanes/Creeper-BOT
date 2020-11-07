@@ -308,29 +308,21 @@ createServer((request: IncomingMessage, response: ServerResponse) => {
 
 									if (mention != null) {
 
+										// Move issue to 'Done' column
+										let issue: Issue = await repo.GetIssueAsync(mention.content_id);
+										let project: Project = await issue.GetProjectAsync();
+										let card: Card = await issue.GetProjectCardAsync();
+										let column: Column = await project.GetColumnAsync('Done');
+										await card.MoveAsync(column);
+
 										// Commits to master reference pull requests
 										if (pullRequest.base.ref === 'master') {
-											let pr: PullRequest = await repo.GetPullRequestAsync(mention.content_id);
-											mention = pr.GetMention();
 
-											if (mention != null) {
+											// Close the issue
+											await issue.UpdateAsync(undefined, undefined, 'closed');
 
-												// Close the issue
-												let issue: Issue = await repo.GetIssueAsync(mention.content_id);
-												await issue.UpdateAsync(undefined, undefined, 'closed');
-
-												// Add nice comment
-												await issue.CreateCommentAsync(`Thank you for your contribution! This issue was ${issue.labels.some((label: Label) => label.name === 'Bug') ? 'fixed' : 'resolved'} and will be implemented in the next release.`);
-											}
-										}
-
-										else {
-											// Move issue to 'Done' column
-											let issue: Issue = await repo.GetIssueAsync(mention.content_id);
-											let project: Project = await issue.GetProjectAsync();
-											let card: Card = await issue.GetProjectCardAsync();
-											let column: Column = await project.GetColumnAsync('Done');
-											await card.MoveAsync(column);
+											// Add nice comment
+											await issue.CreateCommentAsync(`Thank you for your contribution! This issue was ${issue.labels.some((label: Label) => label.name === 'Bug') ? 'fixed' : 'resolved'} and will be implemented in the next release.`);
 										}
 									}
 								}

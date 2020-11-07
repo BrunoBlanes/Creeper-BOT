@@ -222,7 +222,7 @@ export class Issue {
 			repo: this.repository.name,
 			issue_number: this.number,
 			milestone: (milestone === undefined)
-				? this.milestone.number
+				? this.milestone?.number
 				: milestone,
 			labels: labels ?? this.labels.map(function (label: Label) { return label.name; }),
 			state: state
