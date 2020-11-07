@@ -1,6 +1,7 @@
 import { PullRequest, PullRequestEvent } from './GitHubApi/PullRequest';
 import { Card, Project, Column, CardEvent } from './GitHubApi/Project';
 import { createServer, IncomingMessage, ServerResponse } from 'http';
+import { CheckSuiteEvent, CheckSuite } from './GitHubApi/Check';
 import { Issue, IssueEvent } from './GitHubApi/Issue';
 import { PushEvent, Mention } from './GitHubApi/Push';
 import { Repository } from './GitHubApi/Repository';
@@ -333,6 +334,56 @@ createServer((request: IncomingMessage, response: ServerResponse) => {
 					}
 				}
 
+				// Handle check suite events
+				// https://docs.github.com/en/free-pro-team@latest/developers/webhooks-and-events/webhook-events-and-payloads#check_suite
+				else if (request.headers['x-github-event'].toString() === 'check_suite') {
+					let jsonPayload: any = JSON.parse(body);
+
+					// Parse request body as json and set aliases
+					let event: CheckSuiteEvent = new CheckSuiteEvent(jsonPayload);
+					let checkSuite: CheckSuite = event.check_suite;
+					let repo: Repository = event.repository;
+
+					// Create Octokit client with the current installation id
+					await Octokit.SetClientAsync(event.installation.id);
+
+					// Event is related to the 'Average CRM' repo
+					if (event.repository.name === 'Average-CRM') {
+
+						// All check runs in a check suite have completed.
+						if (event.action === 'completed' && checkSuite.conclusion === 'success') {
+
+							if (checkSuite.pull_requests != null) {
+								let pullRequest: PullRequest = await repo.GetPullRequestAsync(checkSuite.pull_requests.first().number);
+								let mention: Mention = pullRequest.GetMention();
+								let issue: Issue = await repo.GetIssueAsync(mention.content_id);
+								let method: 'merge' | 'squash' | 'rebase';
+
+								// Merges to 'master' must be via squash
+								if (pullRequest.base.ref === 'master') {
+									method = 'squash';
+								}
+
+								// Merges from 'master' are rebased
+								else if (pullRequest.head.ref === 'master') {
+									method = 'rebase';
+								}
+
+								else {
+									method = 'merge';
+								}
+
+								// Merge pull request
+								if (pullRequest.mergeable) {
+									await pullRequest.MergeAsync(`${issue.title} (#${pullRequest.number})`, method);
+									await repo.DeleteRerenceAsync(`heads/${pullRequest.head.ref}`);
+									response.writeHead(202);
+								}
+							}
+						}
+					}
+				}
+
 				if (response.statusCode !== 202) {
 					response.writeHead(404);
 				}
@@ -351,7 +402,7 @@ createServer((request: IncomingMessage, response: ServerResponse) => {
 
 	else if (request.method === 'GET') {
 		response.writeHead(200, { 'Content-Type': 'text/html' });
-		response.write('<p>Creeper-bot is a bot created by Bruno Blanes to automate his personal GitHub account.<p>You can find more about him at <a href="https://github.com/BrunoBlanes/Creeper-bot/">https://github.com/BrunoBlanes/Creeper-bot/</a>.<p>v1.2.1');
+		response.write('<p>Creeper-bot is a bot created by Bruno Blanes to automate his personal GitHub account.<p>You can find more about him at <a href="https://github.com/BrunoBlanes/Creeper-bot/">https://github.com/BrunoBlanes/Creeper-bot/</a>.<p>v1.3.0');
 		response.end();
 	}
 

@@ -38,6 +38,9 @@
   <ItemGroup>
     <TypeScriptCompile Include="Extensions\Arrays.ts" />
     <TypeScriptCompile Include="Extensions\Strings.ts" />
+    <TypeScriptCompile Include="GitHubApi\Check.ts">
+      <SubType>Code</SubType>
+    </TypeScriptCompile>
     <TypeScriptCompile Include="GitHubApi\Issue.ts" />
     <TypeScriptCompile Include="GitHubApi\Label.ts" />
     <TypeScriptCompile Include="GitHubApi\Milestone.ts" />

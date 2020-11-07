@@ -116,7 +116,7 @@ export class PullRequest {
 			throw new Error(`Creeper-bot does not have sufficient privileges to reques reviewers at ${this.base.repo.name}.`);
 		}
 
-		throw new Error(`Could not request review for pull request ${this.id}.\n Octokit returned error ${response.status}.`);
+		throw new Error(`Could not request review for pull request ${this.number}.\n Octokit returned error ${response.status}.`);
 	}
 
 	/**
@@ -140,7 +140,28 @@ export class PullRequest {
 			return commits;
 		}
 
-		throw new Error(`Could not retrieve the list of commits from pull request ${this.id}.\n Octokit returned error ${response.status}.`);
+		throw new Error(`Could not retrieve the list of commits from pull request ${this.number}.\n Octokit returned error ${response.status}.`);
+	}
+
+	/**
+	 * Merge a pull request.
+	 * https://docs.github.com/en/free-pro-team@latest/rest/reference/pulls#merge-a-pull-request
+	 * @param title Title for the automatic commit message.
+	 * @param message Extra detail to append to automatic commit message.
+	 * @param method Merge method to use. Possible values are merge, squash or rebase. Default is merge.
+	 */
+	public async MergeAsync(title: string, method: 'merge' | 'squash' | 'rebase'): Promise<void> {
+		let response = await Octokit.Client.request('PUT /repos/:owner/:repo/pulls/:pull_number/merge', {
+			owner: this.base.repo.owner.login,
+			repo: this.base.repo.name,
+			pull_number: this.number,
+			commit_title: title,
+			merge_method: method
+		});
+
+		if (response.status !== 200) {
+			throw new Error(`Could not merge pull request ${this.number}.\n Octokit returned error ${response.status}.`);
+		}
 	}
 
 	/** Return a list with all the issues mentioned. */
