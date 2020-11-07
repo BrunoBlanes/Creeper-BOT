@@ -27,7 +27,7 @@ export class Reference {
 			return releases;
 		}
 
-		throw new Error(`Could list git references matching ${ref} on repository "${repo}" of owner "${owner}".\n Octokit returned error ${response.status}.`);
+		throw new Error(`Could list git references matching ${ref} on repository "${repo}".\n Octokit returned error ${response.status}.`);
 	}
 
 	/**
@@ -50,7 +50,26 @@ export class Reference {
 			return Object.assign(new Reference(), response.data);
 		}
 
-		throw new Error(`Could not create git reference ${ref} on repository "${repo}" of owner "${owner}".\n Octokit returned error ${response.status}.`);
+		throw new Error(`Could not create git reference ${ref} on repository "${repo}".\n Octokit returned error ${response.status}.`);
+	}
+
+	/**
+	 * Delete a reference.
+	 * https://docs.github.com/en/free-pro-team@latest/rest/reference/git#delete-a-reference
+	 * @param owner
+	 * @param repo
+	 * @param ref
+	 */
+	public static async DeleteAsync(owner: string, repo: string, ref: string): Promise<void> {
+		let response = await Octokit.Client.request('DELETE /repos/:owner/:repo/git/refs/:ref', {
+			owner: owner,
+			repo: repo,
+			ref: ref
+		});
+
+		if (response.status !== 204) {
+			throw new Error(`Could not delete git reference ${ref} on repository "${repo}".\n Octokit returned error ${response.status}.`);
+		}
 	}
 
 	public GetVersion(): Version | null {

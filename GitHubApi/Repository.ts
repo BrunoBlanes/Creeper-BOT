@@ -87,6 +87,15 @@ export class Repository {
 	public CreateReferenceAsync(ref: string, sha: string): Promise<Reference> {
 		return Reference.CreateAsync(this.owner.login, this.name, ref, sha);
 	}
+
+	/**
+	 * Delete a reference.
+	 * https://docs.github.com/en/free-pro-team@latest/rest/reference/git#delete-a-reference
+	 * @param ref
+	 */
+	public DeleteRerenceAsync(ref: string): Promise<void> {
+		return Reference.DeleteAsync(this.owner.login, this.name, ref);
+	}
 }
 
 export interface Repository {
