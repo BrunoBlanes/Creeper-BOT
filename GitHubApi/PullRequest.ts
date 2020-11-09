@@ -253,6 +253,27 @@ export class PullRequestEvent {
 	}
 }
 
+export class PullRequestReviewEvent {
+	constructor(jsonPayload: PullRequestReviewEvent) {
+		this.pull_request = Object.assign(new PullRequest(), jsonPayload.pull_request);
+		this.repository = Object.assign(new Repository(), jsonPayload.repository);
+
+		this.action = jsonPayload.action;
+		this.review = jsonPayload.review;
+		this.sender = jsonPayload.sender;
+		this.installation = jsonPayload.installation;
+	}
+}
+
+export interface PullRequestReviewEvent {
+	action: string;
+	review: Review;
+	pull_request: PullRequest;
+	repository: Repository;
+	sender: User;
+	installation: Installation;
+}
+
 export interface PullRequestEvent {
 	action: string;
 	number: number;
@@ -339,4 +360,17 @@ export interface Team {
 	permission: string;
 	members_url: string;
 	repositories_url: string;
+}
+
+export interface Review {
+	id: number;
+	node_id: string;
+	user: User;
+	body?: string;
+	commit_id: string;
+	submitted_at: Date;
+	state: string;
+	html_url: string;
+	pull_request_url: string;
+	author_association: string;
 }
