@@ -6,6 +6,15 @@ import { Milestone } from './Milestone';
 import { Label } from './Label';
 import { User } from './User';
 
+import '../Extensions/Strings';
+import '../Extensions/Arrays';
+
+const keywords = [
+	'fixed', 'fixes', 'fix',
+	'closed', 'closes', 'close',
+	'resolved', 'resolves', 'resolve'];
+const regex: RegExp = /#[1-9][0-9]*/;
+
 export class PullRequest {
 	/**
 	 * Get a pull request.
@@ -36,15 +45,17 @@ export class PullRequest {
 	 * @param head The name of the branch where your changes are implemented.
 	 * @param title The title of the new pull request.
 	 * @param body The contents of the pull request.
+	 * @param draft Indicates whether the pull request is a draft.
 	 */
-	public static async CreateAsync(owner: string, repo: string, head: string, title: string, body: string): Promise<PullRequest> {
+	public static async CreateAsync(owner: string, repo: string, head: string, title: string, body: string, draft: boolean): Promise<PullRequest> {
 		let response = await Octokit.Client.request('POST /repos/:owner/:repo/pulls', {
 			owner: owner,
 			repo: repo,
 			head: head,
 			base: 'refs/heads/master',
 			title: title,
-			body: body
+			body: body,
+			draft: draft
 		});
 
 		if (response.status === 201) {
@@ -56,6 +67,34 @@ export class PullRequest {
 		}
 
 		throw new Error(`Could not create pull request on repository "${repo}".\n Octokit returned error ${response.status}.`);
+	}
+
+	/**
+	 * Update a pull request.
+	 * https://docs.github.com/en/free-pro-team@latest/rest/reference/pulls#update-a-pull-request
+	 * @param head The name of the branch where your changes are implemented.
+	 * @param title The title of the new pull request.
+	 * @param body The contents of the pull request.
+	 * @param draft Indicates whether the pull request is a draft.
+	 */
+	public async UpdateAsync(body: string | null, draft?: boolean): Promise<PullRequest> {
+		let response = await Octokit.Client.request('PATCH /repos/:owner/:repo/pulls/:pull_number', {
+			owner: this.base.repo.owner.login,
+			repo: this.base.repo.name,
+			pull_number: this.number,
+			body: body != null ? body : this.body,
+			draft: draft
+		});
+
+		if (response.status === 20) {
+			return Object.assign(new PullRequest(), response.data);
+		}
+
+		else if (response.status === 403) {
+			throw new Error(`Creeper-bot does not have sufficient privileges to update a pull request at ${this.base.repo.name}.`);
+		}
+
+		throw new Error(`Could not update pull request ${this.number} on repository "${this.base.repo.name}".\n Octokit returned error ${response.status}.`);
 	}
 
 	/**
@@ -165,16 +204,40 @@ export class PullRequest {
 	}
 
 	/** Return a list with all the issues mentioned. */
-	public GetMention(): Mention | null {
+	public GetMentions(): Mention[] {
 		let message: string = this.body.toLowerCase().replace('\n', ' ');
-		let match: RegExpMatchArray = message.match(/#[1-9][0-9]*/);
+		let match: RegExpMatchArray = message.match(regex);
+		let mentions: Mention[] = [];
 
-		// Issue mention found
-		if (match !== null) {
-			return new Mention(+match[0].remove(0, 1), false);
+		while (match !== null) {
+			let resolved: boolean = false;
+
+			for (let keyword of keywords) {
+
+				// Look for a closing keyword in the commit message up until the issue mention
+				let keywordIndex: number = message.lookup(keyword, undefined, match.index);
+
+				if (keywordIndex !== -1) {
+
+					// Keyword was used just before issue was mentioned
+					if ((keywordIndex + keyword.length) === (match.index - 1)) {
+						resolved = true;
+						break;
+					}
+				}
+			}
+
+			// Add keyword index to array
+			mentions.skipDuplicatePush(new Mention(+match[0].remove(0, 1), resolved));
+
+			// Trim the message to remove the current match
+			message = message.substring(match.index + match[0].length);
+
+			// Look for the next match
+			match = message.match(regex);
 		}
 
-		return null;
+		return mentions;
 	}
 }
 
