@@ -1,4 +1,4 @@
-import { PullRequest, PullRequestEvent } from './GitHubApi/PullRequest';
+import { PullRequest, PullRequestEvent, PullRequestReviewEvent } from './GitHubApi/PullRequest';
 import { Card, Project, Column, CardEvent } from './GitHubApi/Project';
 import { createServer, IncomingMessage, ServerResponse } from 'http';
 import { CheckSuiteEvent, CheckSuite } from './GitHubApi/Check';
@@ -255,62 +255,66 @@ createServer((request: IncomingMessage, response: ServerResponse) => {
 
 					// Event is related to the 'Average CRM' repo
 					if (event.repository.name === 'Average-CRM') {
-						for (let commit of event.commits) {
-							let mention: Mention | null = commit.GetMention();
 
-							if (mention != null) {
-								let issue: Issue = await repo.GetIssueAsync(mention.content_id);
-								let project: Project = await issue.GetProjectAsync();
-								let card: Card = await issue.GetProjectCardAsync();
-								let column: Column = mention.resolved
-									? await project.GetColumnAsync('Done')
-									: await project.GetColumnAsync('In progress');
+						// Ignore commits to the master branch
+						if (event.ref.split('/').last() !== 'master') {
+							for (let commit of event.commits) {
+								let mention: Mention | null = commit.GetMention();
 
-								// Move project card
-								await card.MoveAsync(column);
-								let pullRequests: PullRequest[] = await repo.ListPullRequestsAsync(`${event.sender.login}:${event.ref}`);
+								if (mention != null) {
+									let issue: Issue = await repo.GetIssueAsync(mention.content_id);
+									let project: Project = await issue.GetProjectAsync();
+									let card: Card = await issue.GetProjectCardAsync();
+									let column: Column = mention.resolved
+										? await project.GetColumnAsync('Done')
+										: await project.GetColumnAsync('In progress');
 
-								if (pullRequests.length === 0) {
+									// Move project card
+									await card.MoveAsync(column);
+									let pullRequests: PullRequest[] = await repo.ListPullRequestsAsync(`${event.sender.login}:${event.ref}`);
 
-									// Creates a pull request if one don't aleady exists
-									let pullRequest: PullRequest = await repo.CreatePullRequestAsync(
-										event.ref,
-										issue.title,
-										`Resolves #${issue.number}`,
-										mention.resolved === false);
+									if (pullRequests.length === 0) {
 
-									if (mention.resolved === true) {
+										// Creates a pull request if one don't aleady exists
+										let pullRequest: PullRequest = await repo.CreatePullRequestAsync(
+											event.ref,
+											issue.title,
+											`Resolves #${issue.number}`,
+											mention.resolved === false);
 
-										// Request review from me since Creeper-bot is the one opening it
-										await pullRequest.RequestReviewAsync('BrunoBlanes');
-									}
-								}
+										if (mention.resolved === true) {
 
-								else {
-									let pullRequest: PullRequest = pullRequests.first();
-									let mentions: Mention[] = pullRequest.GetMentions();
-									let body: string | null = null;
-
-									// This issue was not mentioned before on this pull request
-									if (mentions.some((mention: Mention) => mention.content_id === issue.number) === false) {
-										body = pullRequest.body;
-										body += `and resolves #${issue.number}`;
+											// Request review from me since Creeper-bot is the one opening it
+											await pullRequest.RequestReviewAsync('BrunoBlanes');
+										}
 									}
 
-									// All mentions were resolved, convert from draft to final
-									if (mentions.some((mention: Mention) => mention.resolved === false) === false) {
-										await pullRequest.UpdateAsync(body, false);
+									else {
+										let pullRequest: PullRequest = pullRequests.first();
+										let mentions: Mention[] = pullRequest.GetMentions();
+										let body: string | null = null;
 
-										// Request review from me since Creeper-bot is the one opening it
-										await pullRequest.RequestReviewAsync('BrunoBlanes');
+										// This issue was not mentioned before on this pull request
+										if (mentions.some((mention: Mention) => mention.content_id === issue.number) === false) {
+											body = pullRequest.body;
+											body += `and resolves #${issue.number}`;
+										}
+
+										// All mentions were resolved, convert from draft to final
+										if (mentions.some((mention: Mention) => mention.resolved === false) === false) {
+											await pullRequest.UpdateAsync(body, false);
+
+											// Request review from me since Creeper-bot is the one opening it
+											await pullRequest.RequestReviewAsync('BrunoBlanes');
+										}
+
+										await pullRequest.UpdateAsync(body);
 									}
-
-									await pullRequest.UpdateAsync(body);
 								}
 							}
-						}
 
-						response.writeHead(202);
+							response.writeHead(202);
+						}
 					}
 				}
 
@@ -360,6 +364,57 @@ createServer((request: IncomingMessage, response: ServerResponse) => {
 								}
 
 								response.writeHead(202);
+							}
+						}
+					}
+				}
+
+				// Handle pull request review events
+				// https://docs.github.com/en/free-pro-team@latest/developers/webhooks-and-events/webhook-events-and-payloads#pull_request_review
+				else if (request.headers['x-github-event'].toString() === 'pull_request_review') {
+					let jsonPayload: any = JSON.parse(body);
+
+					// Parse request body as json and set aliases
+					let event: PullRequestReviewEvent = new PullRequestReviewEvent(jsonPayload);
+					let repo: Repository = event.repository;
+
+					// Create Octokit client with the current installation id
+					await Octokit.SetClientAsync(event.installation.id);
+
+					// Event is related to the 'Average CRM' repo
+					if (event.repository.name === 'Average-CRM') {
+
+						// Handle pull request review approved event
+						if (event.action === 'submitted' && event.review.state === 'approved') {
+
+							// Pull request approved by me
+							if (event.review.user.login === 'BrunoBlanes') {
+								let pullRequest: PullRequest = await repo.GetPullRequestAsync(event.pull_request.number);
+								let mention: Mention = pullRequest.GetMentions().first();
+
+								let issue: Issue = await repo.GetIssueAsync(mention.content_id);
+								let method: 'merge' | 'squash' | 'rebase';
+
+								// Merges to 'master' must be via squash
+								if (pullRequest.base.ref === 'master') {
+									method = 'squash';
+								}
+
+								// Merges from 'master' are rebased
+								else if (pullRequest.head.ref === 'master') {
+									method = 'rebase';
+								}
+
+								else {
+									method = 'merge';
+								}
+
+								// Merge pull request
+								if (pullRequest.mergeable) {
+									await pullRequest.MergeAsync(`${issue.title} (#${pullRequest.number})`, method);
+									await repo.DeleteRerenceAsync(`heads/${pullRequest.head.ref}`);
+									response.writeHead(202);
+								}
 							}
 						}
 					}
