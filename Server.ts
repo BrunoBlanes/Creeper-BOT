@@ -268,13 +268,44 @@ createServer((request: IncomingMessage, response: ServerResponse) => {
 
 								// Move project card
 								await card.MoveAsync(column);
+								let pullRequests: PullRequest[] = await repo.ListPullRequestsAsync(`${event.sender.login}:${event.ref}`);
 
-								// Creates a pull request if one don't aleady exists
-								if ((await repo.ListPullRequestsAsync(`${event.sender.login}:${event.ref}`)).length === 0) {
-									let pullRequest: PullRequest = await repo.CreatePullRequestAsync(event.ref, issue.title, `Resolves #${issue.number}`);
+								if (pullRequests.length === 0) {
 
-									// Request review from me since Creeper-bot is the one opening it
-									await pullRequest.RequestReviewAsync('BrunoBlanes');
+									// Creates a pull request if one don't aleady exists
+									let pullRequest: PullRequest = await repo.CreatePullRequestAsync(
+										event.ref,
+										issue.title,
+										`Resolves #${issue.number}`,
+										mention.resolved === false);
+
+									if (mention.resolved === true) {
+
+										// Request review from me since Creeper-bot is the one opening it
+										await pullRequest.RequestReviewAsync('BrunoBlanes');
+									}
+								}
+
+								else {
+									let pullRequest: PullRequest = pullRequests.first();
+									let mentions: Mention[] = pullRequest.GetMentions();
+									let body: string | null = null;
+
+									// This issue was not mentioned before on this pull request
+									if (mentions.some((mention: Mention) => mention.content_id === issue.number) === false) {
+										body = pullRequest.body;
+										body += `and resolves #${issue.number}`;
+									}
+
+									// All mentions were resolved, convert from draft to final
+									if (mentions.some((mention: Mention) => mention.resolved === false) === false) {
+										await pullRequest.UpdateAsync(body, false);
+
+										// Request review from me since Creeper-bot is the one opening it
+										await pullRequest.RequestReviewAsync('BrunoBlanes');
+									}
+
+									await pullRequest.UpdateAsync(body);
 								}
 							}
 						}
@@ -355,7 +386,8 @@ createServer((request: IncomingMessage, response: ServerResponse) => {
 
 							if (checkSuite.pull_requests != null) {
 								let pullRequest: PullRequest = await repo.GetPullRequestAsync(checkSuite.pull_requests.first().number);
-								let mention: Mention = pullRequest.GetMention();
+								let mention: Mention = pullRequest.GetMentions().first();
+
 								let issue: Issue = await repo.GetIssueAsync(mention.content_id);
 								let method: 'merge' | 'squash' | 'rebase';
 
