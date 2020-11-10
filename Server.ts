@@ -297,7 +297,7 @@ createServer((request: IncomingMessage, response: ServerResponse) => {
 										// This issue was not mentioned before on this pull request
 										if (mentions.some((mention: Mention) => mention.content_id === issue.number) === false) {
 											body = pullRequest.body;
-											body += `and resolves #${issue.number}`;
+											body += ` and resolves #${issue.number}`;
 										}
 
 										// All mentions were resolved, convert from draft to final
