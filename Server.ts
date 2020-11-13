@@ -344,10 +344,6 @@ createServer((request: IncomingMessage, response: ServerResponse) => {
 
 										// Move issue to 'Done' column
 										let issue: Issue = await repo.GetIssueAsync(mention.content_id);
-										let project: Project = await issue.GetProjectAsync();
-										let card: Card = await issue.GetProjectCardAsync();
-										let column: Column = await project.GetColumnAsync('Done');
-										await card.MoveAsync(column);
 
 										// Commits to master reference pull requests
 										if (pullRequest.base.ref === 'master') {
