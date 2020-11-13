@@ -47,10 +47,9 @@ export class Repository {
 	 * @param head The name of the branch where your changes are implemented.
 	 * @param title The title of the new pull request.
 	 * @param body The contents of the pull request.
-	 * @param draft Indicates whether the pull request is a draft.
 	 */
-	public CreatePullRequestAsync(head: string, title: string, body: string, draft: boolean): Promise<PullRequest> {
-		return PullRequest.CreateAsync(this.owner.login, this.name, head, title, body, draft);
+	public CreatePullRequestAsync(head: string, title: string, body: string): Promise<PullRequest> {
+		return PullRequest.CreateAsync(this.owner.login, this.name, head, title, body);
 	}
 
 	/**

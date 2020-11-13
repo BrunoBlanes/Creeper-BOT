@@ -45,9 +45,8 @@ export class PullRequest {
 	 * @param head The name of the branch where your changes are implemented.
 	 * @param title The title of the new pull request.
 	 * @param body The contents of the pull request.
-	 * @param draft Indicates whether the pull request is a draft.
 	 */
-	public static async CreateAsync(owner: string, repo: string, head: string, title: string, body: string, draft: boolean): Promise<PullRequest> {
+	public static async CreateAsync(owner: string, repo: string, head: string, title: string, body: string): Promise<PullRequest> {
 		let response = await Octokit.Client.request('POST /repos/:owner/:repo/pulls', {
 			owner: owner,
 			repo: repo,
@@ -55,7 +54,6 @@ export class PullRequest {
 			base: 'refs/heads/master',
 			title: title,
 			body: body,
-			draft: draft
 		});
 
 		if (response.status === 201) {
@@ -86,7 +84,7 @@ export class PullRequest {
 			draft: draft
 		});
 
-		if (response.status === 20) {
+		if (response.status === 200) {
 			return Object.assign(new PullRequest(), response.data);
 		}
 
@@ -141,9 +139,10 @@ export class PullRequest {
 	 * @param reviewers An array of user logins that will be requested.
 	 */
 	public async RequestReviewersAsync(reviewers: string[]): Promise<PullRequest> {
-		let response = await Octokit.Client.request('POST /repos/{owner}/{repo}/pulls/{pull_number}/requested_reviewers', {
+		let response = await Octokit.Client.request('POST /repos/:owner/:repo/pulls/:pull_number/requested_reviewers', {
 			owner: this.base.repo.owner.login,
 			repo: this.base.repo.name,
+			pull_number: this.number,
 			reviewers: reviewers
 		});
 

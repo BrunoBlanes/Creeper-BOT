@@ -279,8 +279,7 @@ createServer((request: IncomingMessage, response: ServerResponse) => {
 										let pullRequest: PullRequest = await repo.CreatePullRequestAsync(
 											event.ref,
 											issue.title,
-											`Resolves #${issue.number}`,
-											mention.resolved === false);
+											`Resolves #${issue.number}`);
 
 										if (mention.resolved === true) {
 
@@ -302,7 +301,6 @@ createServer((request: IncomingMessage, response: ServerResponse) => {
 
 										// All mentions were resolved, convert from draft to final
 										if (mentions.some((mention: Mention) => mention.resolved === false) === false) {
-											await pullRequest.UpdateAsync(body, false);
 
 											// Request review from me since Creeper-bot is the one opening it
 											await pullRequest.RequestReviewAsync('BrunoBlanes');
